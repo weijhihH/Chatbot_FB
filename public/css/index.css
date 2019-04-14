@@ -1,0 +1,21 @@
+.container-fluid {
+  height: 100vh;
+  color: #208ef0;
+}
+.header {
+  height: 10vh;
+  background-color: #373a3c;
+}
+.main {
+  background-color:#e9ecef;
+  height: 90vh;
+  text-align: center;
+  padding-top:30vh;
+}
+.header-icon{
+  width: 36px;
+  height: 36px;
+}
+li.nav-item {
+  margin-right: 50px;
+}
