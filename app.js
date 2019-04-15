@@ -1,3 +1,6 @@
+/* eslint-disable prefer-promise-reject-errors */
+/* eslint-disable no-plusplus */
+/* eslint-disable no-shadow */
 const express = require('express');
 const mysql = require('mysql');
 const axios = require('axios');
@@ -40,18 +43,15 @@ const db = mysql.createPool({
 // });
 
 // 由 facebook api 找到個人擁有的 page list
-function findPagesList(req) {
+function findPagesList(accessToken) {
   return new Promise((resolve, reject) => {
-    const accessToken = req.get('Authorization');
-    console.log('123213213: ', accessToken)
-    // accessToken = accessToken.replace('Bearer ', '');
-    axios.get('https://graph.facebook.com/me/accounts', { headers: { Authorization: accessToken } })
+    axios.get('https://graph.facebook.com/me/accounts', { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((res) => {
-        console.log('666',res)
+        // console.log('666', res.data);
         resolve(res);
       })
       .catch((error) => {
-        console.log('777',error.message);
+        console.log('777', error.message);
         reject(error.message);
       });
   });
@@ -72,7 +72,26 @@ function pageSubscribed(data) {
           subscribed_fields: 'messages, messaging_postbacks, message_reads, messaging_checkout_updates',
         },
       }).then((res) => {
-        console.log('response messages form FacebookPageSubscribed: ', res.data);
+
+        // if(res.data === 'successed') {
+        //   db.getConnection((err, connection) => {
+        //     if (err) throw err;
+        //     connection.query(`select id from user where id = '${arr.access_token}'`,(err, result) => {
+        //       console.log('123',result[0].id)
+        //       if(err){
+        //         connection.release();
+        //         throw err;
+        //       }
+        //       connection.query(`update pages set subscribed = subscribed where subscribed = '${result[0].id}'`,(err, result) => {
+        //         connection.release();
+        //         if (err) throw err;
+        //         console.log('response messages form FacebookPageSubscribed: ', res.data);
+        //         return (res.data);
+        //       })
+        //       // result[0].id
+        //     })
+        //   })
+        // }
         return (res.data);
       }).catch((error) => {
         console.log('error messages form FacebookPageSubscribed: ', error.data);
@@ -111,7 +130,8 @@ app.get(`/api/${cst.API_VERSION}/signin`, (req, res) => {
         expiredTime,
       };
       return data;
-    }).then((profile) => {
+    })
+    .then((profile) => {
       // 將個人資訊存成入 DB , 並且回傳 cookie
       db.getConnection((err, connection) => {
         if (err) throw err;
@@ -123,22 +143,28 @@ app.get(`/api/${cst.API_VERSION}/signin`, (req, res) => {
             // DB 找不到會員資料, 新增一筆
             connection.beginTransaction((error) => {
               if (error) {
+                console.log('111')
                 connection.release();
+                res.send({ error: 'Database Query Error' });
               }
-              res.send({ error: 'Database Query Error' });
               connection.query('insert into user set?', profile, (error) => {
                 connection.release();
                 if (error) {
+                  console.log('222')
                   res.send({ error: 'Database Query Error' });
                   return connection.rollback();
                 }
+                console.log('333')
                 connection.commit((error) => {
+                  console.log('444')
                   if (error) {
                     return connection.rollback(() => {
+                      console.log('555')
                       res.send({ error: 'Database Query Error' });
                       throw error;
                     });
                   }
+                  console.log('666')
                   res.cookie('Authorization', profile.accessToken);
                   res.send({ data: profile });
                 });
@@ -167,28 +193,97 @@ app.get(`/api/${cst.API_VERSION}/signin`, (req, res) => {
         });
       });
     }).catch((error) => {
+      res.send(error);
       console.log('error:', error);
     });
 });
 
-//訂閱
-//pageSubscribed
-//存資料庫
+
+// 將 pages 存入資料庫
+function listAddedToken(pageLists, longLivedToken, accessToken) {
+  return new Promise((resolve, reject) => {
+    const arrayPromise = [];
+    for (let i = 0; i < pageLists.length; i++) {
+      arrayPromise.push(pageLists[i]);
+      arrayPromise[i].longLivedToken = longLivedToken[i].access_token;
+      db.getConnection((err, connection) => {
+        if (err) {
+          connection.release();
+          reject(err);
+        }
+        const querySelect = `SELECT pages.* FROM user LEFT JOIN pages on user.id = pages.id where user.accessToken = '${accessToken}' and pages.pageId = '${pageLists[i].id}'`;
+        connection.query(querySelect, (err, result) => {
+          if (err) {
+            connection.release();
+            reject(err);
+          }
+          const dataInputDB = {
+            // id: result[0].id,
+            pageName: pageLists[i].name,
+            pageId: pageLists[i].id,
+            pageAccessToken: longLivedToken[i].access_token,
+          };
+          if (result.length > 0) {
+            dataInputDB.id = result[0].id;
+            // console.log('dataInputDB: ', dataInputDB);
+            const queryUpdate = `update pages set ? where pages.pageId = '${pageLists[i].id}'`;
+            connection.query(queryUpdate, dataInputDB, (err, result) => {
+              if (err) {
+                connection.release();
+                reject(err);
+              }
+              resolve(result);
+              // console.log('123123213', result);
+            });
+          } else {
+            const querySelectFindId = `select * from user where user.accessToken = '${accessToken}'`;
+            connection.query(querySelectFindId, (err, result) => {
+              if (err) {
+                connection.release();
+                reject(err);
+              } else if (result.length === 0) {
+                connection.release();
+                reject({ error: 'Invalid accessToken' });
+              } else {
+                dataInputDB.id = result[0].id;
+                const queryInsert = 'insert into pages set ?;';
+                connection.query(queryInsert, dataInputDB, (err, result) => {
+                  connection.release();
+                  if (err) {
+                    console.log(err);
+                    reject(err);
+                  }
+                  resolve(result);
+                });
+              }
+            });
+          }
+        });
+      });
+    }
+  });
+}
 
 app.get(`/api/${cst.API_VERSION}/profile`, async (req, res) => {
-  const accessToken = req.get('Authorization');
+  let accessToken = req.get('Authorization');
+  accessToken = accessToken.replace('Bearer ', '');
+  // console.log('123', accessToken);
   try {
     // 用 facebook accessToken 找到對應個人有幾個粉絲頁(fb page)
-    const findPagesListResult = await findPagesList(req);
+    const findPagesListResult = await findPagesList(accessToken);
     const pageLists = findPagesListResult.data.data;
+    // console.log('12312312  ', pageLists)
     // 取得長期權杖 
     const longLivedToken = await getLongLivedToken(pageLists);
-    console.log('222: ', longLivedToken)
+    await listAddedToken(pageLists, longLivedToken, accessToken);
+
+    // console.log('12839213921: ', pageListsbindLongLivedToken);
     // 將資料存入DB , id(user,foreign key),page_id,page_name,page_accessToken,expired_in
     //
     // longLivedToken
-    console.log('123',longLivedToken)
-    // const result = await pageSubscribed(pageLists);
+    // console.log('123',longLivedToken)
+    const result = await pageSubscribed(pageLists);
+    console.log('777: ',result);
     res.send({ data: pageLists });
   } catch (error) {
     res.send({ error: error.error });
@@ -204,9 +299,9 @@ app.get(`/api/${cst.API_VERSION}/profile`, async (req, res) => {
 // Expires time from 2 hours extend to 2 mounths.
 // FB PageAccessToken exchange to long-lived token from short-lived token
 function getLongLivedToken(pageListsArray) {
-  return new Promise((resolve,reject) =>{
+  return new Promise((resolve, reject) => {
     const arrayPromise = [];
-    pageListsArray.forEach((arr) =>{
+    pageListsArray.forEach((arr) => {
       arrayPromise.push(axios({
         method: 'GET',
         url: 'https://graph.facebook.com/oauth/access_token',
@@ -217,10 +312,10 @@ function getLongLivedToken(pageListsArray) {
           fb_exchange_token: arr.access_token,
         },
       }).then((res) => {
-        console.log('res data for getLongLivedToken', res.data);
-        return(res.data);
+        // console.log('res data for getLongLivedToken', res.data);
+        return (res.data);
       }).catch((error) => {
-        console.log('error for getLongLivedToken', error);
+        // console.log('error for getLongLivedToken', error);
         reject(error);
       }));
     });
@@ -292,11 +387,17 @@ app.get('/webhook', (req, res) => {
 });
 
 
-//測試用
-app.get('/test', (req,res) =>{
-  console.log('req: ',req.body);
-  res.send({data:'test api'});
-})
+// 測試用
+app.get('/test', (req, res) => {
+  console.log('req: ', req.body);
+  res.send({ data: 'test api' });
+});
+
+// 機器人相關內容
+
+
+
+//
 
 app.listen('3001', () => {
   console.log('Server connected on port 3001');

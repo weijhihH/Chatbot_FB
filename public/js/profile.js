@@ -35,26 +35,29 @@ fetch('/api/'+app.cst.apiVersion+'/profile',{
 })
 .catch((err) =>{
   alert('查無任何 page 資訊, 請確認是否有 facebook 粉絲專頁, 即將導回首頁');
-  // window.location = '/';
+  window.location = '/';
   
 })
 }
+
 
 // profile content 
 function pagesConten(profile,i,content){
   content = `<div class="card" style="width: 18rem;">`
   content +=`<div class="card-body">`
-  content += `<h5 class="card-title">頁數 ${i+1}</h5>`
-  content += `<h6 class="card-subtitle mb-1 ">ID: </h6>`
-  content += `<p class="card-text">"${profile.id}"</p>`
+  content += `<h5 class="card-title">專頁 ${i+1}</h5>`
   content += `<h6 class="card-subtitle mb-1 ">Name: </h6>`
-  content += `<p class="card-text">"${profile.name}"</p>`          
-  content += `<button class="subscribe btn btn-primary btn-block" role="button" aria-pressed="true" value=${i}>訂閱 Webhook</button>`
+  content += `<p class="card-text">${profile.name}</p>`          
+  content += `<h6 class="card-subtitle mb-1 ">ID: </h6>`
+  content += `<p class="card-text">${profile.id}</p>`
+  // content += `<button class="subscribe btn btn-primary btn-block" role="button" aria-pressed="true" value=${i}>訂閱 Webhook</button>`
   content += `<button class="btn btn-primary btn-block" role="button" aria-pressed="true" value=${i}>進入 Dashboard</button>`
   content += `</div>`
   content += `</div>`  
   return content;
 }
+
+
 
 //控制 jquery events
 function jqueryDom (content){
@@ -73,5 +76,8 @@ $(function(){
     //   body:{},
     // })
   });
+  $('.btn').on('click',function(){
+    window.location = '/user/dashboard.html';
+  })
 })
 }
