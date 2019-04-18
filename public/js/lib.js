@@ -56,6 +56,17 @@ app.getCookie = function(cname) {
   return "";
 }
 
+app.getParameter = function (name) {
+  let result=null, tmp=[];
+  window.location.search.substring(1).split("&").forEach(function(item){
+    tmp = item.split("=");
+    if(tmp[0] === name){
+      result = decodeURIComponent(tmp[1]);
+    }
+  })
+  return result;
+}
+
 
 
 

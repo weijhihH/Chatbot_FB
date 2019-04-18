@@ -51,7 +51,7 @@ function pagesConten(profile,i,content){
   content += `<h6 class="card-subtitle mb-1 ">ID: </h6>`
   content += `<p class="card-text">${profile.id}</p>`
   // content += `<button class="subscribe btn btn-primary btn-block" role="button" aria-pressed="true" value=${i}>訂閱 Webhook</button>`
-  content += `<button class="btn btn-primary btn-block" role="button" aria-pressed="true" value=${i}>進入 Dashboard</button>`
+  content += `<button class="btn btn-primary btn-block" role="button" aria-pressed="true" id=${profile.id}>進入 Dashboard</button>`
   content += `</div>`
   content += `</div>`  
   return content;
@@ -65,19 +65,10 @@ $(function(){
   // render content
   $(".page-content").append(content);
   // 按鈕
-  $('.subscribe').on('click',function(event){
-    $('.subscribe').addClass('disabled');
-    // const index = event.target.value
-    // fetch('', {
-    //   method:'POST',
-    //   headers:{
-    //     Authorization: `Bearer ${this.accessToken}`
-    //   },
-    //   body:{},
-    // })
-  });
-  $('.btn').on('click',function(){
-    window.location = '/user/dashboard.html';
+  $('.btn').on('click',function(event){
+    console.log(event.target.id)
+    app.fb.pageId = event.target.id;
+    window.location = '/user/dashboard.html?id=' + event.target.id ;
   })
 })
 }

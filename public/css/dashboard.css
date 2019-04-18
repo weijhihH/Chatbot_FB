@@ -33,3 +33,9 @@ li.nav-item {
 .fb {
   border: 1px solid black;
 }
+
+#wellcomeMessageForm {
+
+  display:none;
+  
+  }

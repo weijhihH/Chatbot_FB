@@ -9,15 +9,16 @@
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="../js/lib.js"></script>
     <script src="../js/dashboard.js"></script>
-    <script src="../js/index.js"></script>
+
 
   </head>
 
   <body>
       <div class="row ">
       <nav class="col-12 navbar navbar-expand-md">
-        <a href="#" class="navbar-brand">ChatBot</a>
+        <a href="#" class="navbar-brand">ChatBfot</a>
         <ul class="navbar-nav">
           <li class="nav-item"><a href="#">DashBoard</a></li>
           <li class="nav-item"><a href="#">AboutUs</a></li>
@@ -29,14 +30,19 @@
             <a class="list-group-item list-group-item-action" data-toggle="list" href="#settings" role="tab">Settings</a> -->
         </div>
         <div class="div-2 col-3 login list-group" id="myList" role="tablist">
-            <a class="list-group-item list-group-item-action active" data-toggle="list" href="#home" role="tab">Wellcome Message</a>
-            <a class="list-group-item list-group-item-action" data-toggle="list" href="#profile" role="tab">Send Message</a>
+            <a class="list-group-item list-group-item-action navWellcomeMessage" data-toggle="list" href="#" role="tab">Wellcome Message</a>
+            <a class="list-group-item list-group-item-action" data-toggle="list" href="#" role="tab">Send Message</a>
         </div>
-        <div class="div-3 col login list-group" id="myList" role="tablist">
+        <!-- <div class="div-3 col login list-group" id="myList" role="tablist">
             <a class="list-group-item list-group-item-action active" data-toggle="list" href="#home" role="tab">content 1</a>
             <a class="list-group-item list-group-item-action" data-toggle="list" href="#profile" role="tab">content 2</a>
             <a class="list-group-item list-group-item-action" data-toggle="list" href="#settings" role="tab">content 3</a>
-        </div>
+        </div> -->
+        <form id="wellcomeMessageForm" class=" form-group" >
+          <label for="wellcomeMessageTextArea">Wellcome message</label>
+          <textarea class="form-control" id="wellcomeMessageTextArea" rows="10" ></textarea>
+          <button type="submit" id="wellcomeMessageButton" class="btn btn-primary mb-2">Submit</button>
+        </form>
       </div>
     </body>
   </html>

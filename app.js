@@ -395,6 +395,105 @@ app.get('/test', (req, res) => {
 
 // 機器人相關內容
 
+//設置 Greeting message , 第一次聊天看到的訊息
+app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
+  const requestBody = {
+    "get_started": {
+      "payload":"getStarted"
+    },
+    "greeting":[
+      {
+        "locale": "default",
+        "text": req.body.data.text
+      }
+    ]
+  };
+  try {
+    const pageAccessToken = await dbFindPageAccessToken(req)
+    const result = await fetchSetGreeting(pageAccessToken, requestBody)
+    res.send({result});
+  } 
+  catch (error) {
+    res.send({error: "someting error happening"});
+  }
+
+  // 進資料庫用 pageId 找 page's accessToken
+  function dbFindPageAccessToken(req){
+    return new Promise ((resolve, reject) => {
+      db.query(`select * from pages where pageId = '${req.body.data.pageId}'`, (err, result) => {
+        if (err) {
+          reject(err)
+        }
+        resolve(result[0].pageAccessToken)
+      })
+    })
+  }
+
+  function fetchSetGreeting (pageAccessToken, requestBody){
+    return new Promise((resolve,reject) => {
+      axios({
+        method: 'POST',
+        url:'https://graph.facebook.com/v3.2/me/messenger_profile',
+        headers: {
+          'Authorization' : `Bearer ${pageAccessToken}`,
+          'Content-Type': 'application/json'
+        },
+        data: requestBody
+      }).then((res) => {
+        resolve(res.data);
+      }).catch((error) => {
+        reject(error.data);
+        });
+    })
+  }
+})
+
+app.get(`/api/${cst.API_VERSION}/webhook/greeting`, (req, res) =>{
+  let accessToken = req.get('Authorization');
+  accessToken = accessToken.replace('Bearer ', '');
+
+})
+
+// Creates the endpoint for our webhook 
+app.post('/webhook', (req, res) => {  
+  // const VERIFY_TOKEN = PAGE_ACCESS_TOKEN;
+  // Parse the request body from the POST
+  let body = req.body;
+
+  // Check the webhook event is from a Page subscription
+  if (body.object === 'page') {
+
+    body.entry.forEach(function(entry) {
+
+      // Gets the body of the webhook event
+      let webhook_event = entry.messaging[0];
+    
+      // Get the sender PSID
+      let sender_psid = webhook_event.sender.id;
+      console.log('Sender PSID: ' + sender_psid);
+      
+      // Check if the event is a message or postback and
+      // pass the event to the appropriate handler function
+      if (webhook_event.message) {
+        console.log('1231111', webhook_event.message)
+        handleMessage(sender_psid, webhook_event.message);        
+      } else if (webhook_event.postback) {
+        handlePostback(sender_psid, webhook_event.postback);
+      }
+
+    });
+
+    // Return a '200 OK' response to all events
+    res.status(200).send('EVENT_RECEIVED');
+
+  } else {
+    // Return a '404 Not Found' if event is not from a page subscription
+    res.sendStatus(404);
+  }
+
+});
+
+
 // Handles messages events
 function handleMessage(sender_psid, received_message) {
   let response;
@@ -502,8 +601,37 @@ function callSendAPI(sender_psid, response) {
 
 // 機器人相關內容
 
+// 建立連結 get_started ( post to facebook messenger platform)
+function fbMessengerPlatformGetStarted(accessToken) {
+  return new Promise((resolve, reject) => {
+    // let accessToken = 'EAALux5Ptc6QBADQfic0MZCiRI3OiwZAHQF0nzHeZC3d8KUaV39UeocoIxt9K54wATrD03zqG2yNMLiimk3BeE5t3RtnZCp9J06LBFSL48KlPPzX5eHTRAqReP373x8GHPPpz6UR3ZApb2R5zfEHzYI5WSOvQ551SaFdJlBmjpCx3IqDQhoWbU'
+    axios('https://graph.facebook.com/v3.2/me/messenger_profile', {
+      method: 'post',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      data: {
+        get_started: {
+          payload:'getStarted'
+        }
+      }
+    })
+      .then((res) => {
+        // console.log('res:,' , res.data)
+        resolve(res.data);
+      })
+      .catch((error) => {
+        // console.log('error', error.data)
+        reject(error.data);
+      });
+  });
+}
+
+// 建立 get_started wellcome message 
+
+
+
 app.listen('3001', () => {
   console.log('Server connected on port 3001');
 });
 
 // Mysql
+
