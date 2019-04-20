@@ -419,6 +419,7 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
 app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => {
   const response = req.body
   const info = {
+    "message":{
       "attachment":{
         "type":"templete",
         "payload":{
@@ -427,11 +428,11 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
           "buttons": response.data.buttons
         }
       }
+    }
   }
   const queryInput = {
     pageId: response.pageId,
     position: response.position,
-    payload: 'getStarted',
     info: JSON.stringify(info)
   }
   try {
@@ -454,7 +455,7 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
       console.log('data found in db.')
       let pageId = queryResultForPageId[0].pageId
       // 資料庫有現有資料, 故更新資料
-      let queryInputUpdated = `update wellcomeMessage set ? where pageId = '${pageId}' and payload = 'getStarted'`
+      let queryInputUpdated = `update wellcomeMessage set ? where pageId = '${pageId}'`
       db.getConnection((error, connection) => {
         if (error) {
           throw error;
@@ -479,13 +480,12 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
         if (error){
           reject (error);
         }
-        let selectQuery = `select * from wellcomeMessage where pageId = '${queryInput.pageId}' and payload = '${queryInput.payload}'`
+        let selectQuery = `select * from wellcomeMessage where pageId = ${queryInput.pageId} and position = ${queryInput.position}`
         connection.query(selectQuery, (error ,result) => {
           connection.release();
           if(error) {
             reject(error)
           } else {
-            console.log('test1')
             resolve(result);
           }
         });
@@ -500,10 +500,9 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
 app.post('/webhook', async (req, res) => {
   // Parse the request body from the POST
   let body = req.body;
-  let pageId = req.body.entry[0].id
   // use pageID to get facebook accesstoken
   try {
-  const pageAccessToken = await dbFindPageAccessToken(pageId)
+  const pageAccessToken = await dbFindPageAccessToken(req.body.entry[0].id)
   // console.log('abcde:', body.object);
   
 
@@ -526,8 +525,7 @@ app.post('/webhook', async (req, res) => {
         // console.log('1231111', webhook_event.message)
         handleMessage(sender_psid, webhook_event.message, pageAccessToken);        
       } else if (webhook_event.postback) {
-        let test = handlePostback(pageId, webhook_event.postback);
-        console.log('231231231:', test);
+        handlePostback(sender_psid, webhook_event.postback, pageAccessToken);
       }
 
     });
@@ -628,27 +626,6 @@ function handlePostback(sender_psid, received_postback, accessToken) {
   }
   // Send the message to acknowledge the postback
   callSendAPI(sender_psid, response, accessToken);
-}
-
-function handlePostback(pageId, received_postback) {
-  return new Promise((resolve, reject) => {
-    // Get the payload for the postback
-    let payload = received_postback.payload;
-    // 從資料找到對應到 payload 的資料
-    let query = `select * from wellcomeMessage where pageId = '${pageId}' and payload = '${payload}'`
-    // Set the response based on the postback payload
-    db.query(query, (error, result) => {
-      if (error) {
-        return reject (error);
-      }
-      if (result.length !== 0){
-        return resolve(result[0].info)
-      } else {
-        return resolve ({ "text": "看不懂你在幹嘛啊~~~"})
-      }
-    })
-  
-  })
 }
 
 // Sends response messages via the Send API
