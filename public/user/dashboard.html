@@ -26,23 +26,54 @@
       </nav>
         <div class="div-1 col-1.5 login list-group " id="myList" role="tablist">
             <a class="list-group-item list-group-item-action active" data-toggle="list" href="#home" role="tab">Message</a>
-            <!-- <a class="list-group-item list-group-item-action" data-toggle="list" href="#profile" role="tab">Broadcast</a>
-            <a class="list-group-item list-group-item-action" data-toggle="list" href="#settings" role="tab">Settings</a> -->
         </div>
+
         <div class="div-2 col-3 login list-group" id="myList" role="tablist">
+            <a class="list-group-item list-group-item-action navWellcomeMessageGreeting" data-toggle="list" href="#" role="tab">Wellcome Screen</a>
             <a class="list-group-item list-group-item-action navWellcomeMessage" data-toggle="list" href="#" role="tab">Wellcome Message</a>
-            <a class="list-group-item list-group-item-action" data-toggle="list" href="#" role="tab">Send Message</a>
         </div>
-        <!-- <div class="div-3 col login list-group" id="myList" role="tablist">
-            <a class="list-group-item list-group-item-action active" data-toggle="list" href="#home" role="tab">content 1</a>
-            <a class="list-group-item list-group-item-action" data-toggle="list" href="#profile" role="tab">content 2</a>
-            <a class="list-group-item list-group-item-action" data-toggle="list" href="#settings" role="tab">content 3</a>
-        </div> -->
+
+        <form id="wellcomeMessageFormGreeting" class=" form-group" >
+          <label for="wellcomeMessageTextArea">Wellcome message - Greeting</label>
+          <textarea class="form-control" id="wellcomeScreenTextArea" rows="10" ></textarea>
+          <button type="submit" id="wellcomeScreenButton" class="btn btn-primary mb-2">Submit</button>
+        </form>
+
         <form id="wellcomeMessageForm" class=" form-group" >
-          <label for="wellcomeMessageTextArea">Wellcome message</label>
-          <textarea class="form-control" id="wellcomeMessageTextArea" rows="10" ></textarea>
+          <label>Wellcome message</label>
+          <!-- textarea 上限 640 個 utf8 編碼文字 -->
+          <textarea class="form-control" id="wellcomeMessageTextArea" placeholder="Text" rows="1" ></textarea> 
+          <!-- 設定回傳按鈕 -->
+          <label >第一組按鈕</label>
+          <div class="form-row">
+            <div class="col">
+              <input type="text" class="form-control text-1" placeholder="按鈕名稱">
+            </div>
+            <div class="col">
+              <input type="text" class="form-control payload-1" placeholder="回覆按鈕">
+            </div>
+          </div>
+          <label >第二組按鈕</label>
+          <div class="form-row">
+            <div class="col">
+              <input type="text" class="form-control text-2" placeholder="按鈕名稱">
+            </div>
+            <div class="col">
+              <input type="text" class="form-control payload-2" placeholder="回覆按鈕">
+            </div>
+          </div>
+          <label >第三組按鈕</label>
+          <div class="form-row">
+            <div class="col">
+              <input type="text" class="form-control text-3" placeholder="按鈕名稱">
+            </div>
+            <div class="col">
+              <input type="text" class="form-control payload-3" placeholder="回覆按鈕">
+            </div>
+          </div>
           <button type="submit" id="wellcomeMessageButton" class="btn btn-primary mb-2">Submit</button>
         </form>
+
       </div>
     </body>
   </html>

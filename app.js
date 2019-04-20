@@ -143,28 +143,28 @@ app.get(`/api/${cst.API_VERSION}/signin`, (req, res) => {
             // DB 找不到會員資料, 新增一筆
             connection.beginTransaction((error) => {
               if (error) {
-                console.log('111')
+                // console.log('111')
                 connection.release();
                 res.send({ error: 'Database Query Error' });
               }
               connection.query('insert into user set?', profile, (error) => {
                 connection.release();
                 if (error) {
-                  console.log('222')
+                  // console.log('222')
                   res.send({ error: 'Database Query Error' });
                   return connection.rollback();
                 }
-                console.log('333')
+                // console.log('333')
                 connection.commit((error) => {
-                  console.log('444')
+                  // console.log('444')
                   if (error) {
                     return connection.rollback(() => {
-                      console.log('555')
+                      // console.log('555')
                       res.send({ error: 'Database Query Error' });
                       throw error;
                     });
                   }
-                  console.log('666')
+                  // console.log('666')
                   res.cookie('Authorization', profile.accessToken);
                   res.send({ data: profile });
                 });
@@ -172,7 +172,7 @@ app.get(`/api/${cst.API_VERSION}/signin`, (req, res) => {
             }); // Mysql Transaction
           } else if (result.length !== 0) {
             // DB 有會員資料, 故更新資料庫
-            connection.query('update user set ?', profile, (error) => {
+            connection.query(`update user set ? where id = '${profile.id}'`, profile, (error) => {
               connection.release();
               if (error) {
                 res.send({ error: 'Database Query Error' });
@@ -186,6 +186,7 @@ app.get(`/api/${cst.API_VERSION}/signin`, (req, res) => {
                   });
                 }
                 res.cookie('Authorization', profile.accessToken);
+
                 res.send({ data: profile });
               });
             });
@@ -194,7 +195,7 @@ app.get(`/api/${cst.API_VERSION}/signin`, (req, res) => {
       });
     }).catch((error) => {
       res.send(error);
-      console.log('error:', error);
+      // console.log('error:', error);
     });
 });
 
@@ -250,7 +251,7 @@ function listAddedToken(pageLists, longLivedToken, accessToken) {
                 connection.query(queryInsert, dataInputDB, (err, result) => {
                   connection.release();
                   if (err) {
-                    console.log(err);
+                    // console.log(err);
                     reject(err);
                   }
                   resolve(result);
@@ -283,7 +284,7 @@ app.get(`/api/${cst.API_VERSION}/profile`, async (req, res) => {
     // longLivedToken
     // console.log('123',longLivedToken)
     const result = await pageSubscribed(pageLists);
-    console.log('777: ',result);
+    // console.log('777: ',result);
     res.send({ data: pageLists });
   } catch (error) {
     res.send({ error: error.error });
@@ -326,72 +327,36 @@ function getLongLivedToken(pageListsArray) {
   });
 }
 
-// Creates the endpoint for our webhook 
-app.post('/webhook', (req, res) => {  
-  const VERIFY_TOKEN = PAGE_ACCESS_TOKEN;
-  // Parse the request body from the POST
-  let body = req.body;
 
-  // Check the webhook event is from a Page subscription
-  if (body.object === 'page') {
 
-    body.entry.forEach(function(entry) {
+// // Adds support for GET requests to our webhook
+// app.get('/webhook', (req, res) => {
 
-      // Gets the body of the webhook event
-      let webhook_event = entry.messaging[0];
-      console.log(webhook_event);
+//   // Your verify token. Should be a random string.
+//   let VERIFY_TOKEN = PAGE_ACCESS_TOKEN;
+//   console.log('000000000');
     
-      // Get the sender PSID
-      let sender_psid = webhook_event.sender.id;
-      console.log('Sender PSID: ' + sender_psid);
+//   // Parse the query params
+//   let mode = req.query['hub.mode'];
+//   let token = req.query['hub.verify_token'];
+//   let challenge = req.query['hub.challenge'];
     
-    });
-
-    // Return a '200 OK' response to all events
-    res.status(200).send('EVENT_RECEIVED');
-
-  } else {
-    // Return a '404 Not Found' if event is not from a page subscription
-    res.sendStatus(404);
-  }
-
-});
-
-
-// Adds support for GET requests to our webhook
-app.get('/webhook', (req, res) => {
-
-  // Your verify token. Should be a random string.
-  let VERIFY_TOKEN = PAGE_ACCESS_TOKEN;
-    
-  // Parse the query params
-  let mode = req.query['hub.mode'];
-  let token = req.query['hub.verify_token'];
-  let challenge = req.query['hub.challenge'];
-    
-  // Checks if a token and mode is in the query string of the request
-  if (mode && token) {
+//   // Checks if a token and mode is in the query string of the request
+//   if (mode && token) {
   
-    // Checks the mode and token sent is correct
-    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+//     // Checks the mode and token sent is correct
+//     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
       
-      // Responds with the challenge token from the request
-      console.log('WEBHOOK_VERIFIED');
-      res.status(200).send(challenge);
+//       // Responds with the challenge token from the request
+//       console.log('WEBHOOK_VERIFIED');
+//       res.status(200).send(challenge);
     
-    } else {
-      // Responds with '403 Forbidden' if verify tokens do not match
-      res.sendStatus(403);      
-    }
-  }
-});
-
-
-// 測試用
-app.get('/test', (req, res) => {
-  console.log('req: ', req.body);
-  res.send({ data: 'test api' });
-});
+//     } else {
+//       // Responds with '403 Forbidden' if verify tokens do not match
+//       res.sendStatus(403);      
+//     }
+//   }
+// });
 
 // 機器人相關內容
 
@@ -409,24 +374,13 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
     ]
   };
   try {
-    const pageAccessToken = await dbFindPageAccessToken(req)
+    const pageAccessToken = await dbFindPageAccessToken(req.body.data.pageId)
     const result = await fetchSetGreeting(pageAccessToken, requestBody)
+    res.cookie('123213','3232323')
     res.send({result});
   } 
   catch (error) {
     res.send({error: "someting error happening"});
-  }
-
-  // 進資料庫用 pageId 找 page's accessToken
-  function dbFindPageAccessToken(req){
-    return new Promise ((resolve, reject) => {
-      db.query(`select * from pages where pageId = '${req.body.data.pageId}'`, (err, result) => {
-        if (err) {
-          reject(err)
-        }
-        resolve(result[0].pageAccessToken)
-      })
-    })
   }
 
   function fetchSetGreeting (pageAccessToken, requestBody){
@@ -443,42 +397,135 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
         resolve(res.data);
       }).catch((error) => {
         reject(error.data);
-        });
+      });
     })
   }
 })
 
-app.get(`/api/${cst.API_VERSION}/webhook/greeting`, (req, res) =>{
-  let accessToken = req.get('Authorization');
-  accessToken = accessToken.replace('Bearer ', '');
+  // 進資料庫用 pageId 找 page's accessToken
+  function dbFindPageAccessToken(pageId){
+    return new Promise ((resolve, reject) => {
+      db.query(`select * from pages where pageId = '${pageId}'`, (err, result) => {
+        if (err) {
+          reject(err)
+        }
+        resolve(result[0].pageAccessToken)
+      })
+    })
+  }
 
+
+
+app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => {
+  const response = req.body
+  const info = {
+    "message":{
+      "attachment":{
+        "type":"templete",
+        "payload":{
+          "template_type": response.data.template_type,
+          "text": response.data.text,
+          "buttons": response.data.buttons
+        }
+      }
+    }
+  }
+  const queryInput = {
+    pageId: response.pageId,
+    position: response.position,
+    info: JSON.stringify(info)
+  }
+  try {
+    let queryResultForPageId = await queryResults(queryInput)
+    console.log('queryResultForPageId123: ', queryResultForPageId.length)
+    if ( queryResultForPageId.length === 0 ){
+      // 資料庫中無資料, 需存入一筆新的
+      db.getConnection((error, connection) => {
+        if (error)
+        throw error;
+        let queryInputNew = `insert into wellcomeMessage set ?`
+        connection.query(queryInputNew, queryInput, (error) => {
+          connection.release();
+          if (error)
+          throw error;
+          res.send ({data: 'data has been saved'})
+        })
+      })
+    } else {
+      console.log('data found in db.')
+      let pageId = queryResultForPageId[0].pageId
+      // 資料庫有現有資料, 故更新資料
+      let queryInputUpdated = `update wellcomeMessage set ? where pageId = '${pageId}'`
+      db.getConnection((error, connection) => {
+        if (error) {
+          throw error;
+        }
+        connection.query(queryInputUpdated, queryInput, (error) => {
+          connection.release();
+          if (error)
+          throw error;
+          res.send({data: 'data has been updated'});
+        })
+      })
+    }
+  } catch (error){
+    console.log(error);
+    res.send({error : error});
+  }
+
+  // 用 pageId 確認是否在資料庫中
+  function queryResults (queryInput){
+    return new Promise((resolve, reject) => {
+      db.getConnection((error, connection) => {
+        if (error){
+          reject (error);
+        }
+        let selectQuery = `select * from wellcomeMessage where pageId = ${queryInput.pageId} and position = ${queryInput.position}`
+        connection.query(selectQuery, (error ,result) => {
+          connection.release();
+          if(error) {
+            reject(error)
+          } else {
+            resolve(result);
+          }
+        });
+      })
+    })
+  }  
 })
 
+
+
 // Creates the endpoint for our webhook 
-app.post('/webhook', (req, res) => {  
-  // const VERIFY_TOKEN = PAGE_ACCESS_TOKEN;
+app.post('/webhook', async (req, res) => {
   // Parse the request body from the POST
   let body = req.body;
+  // use pageID to get facebook accesstoken
+  try {
+  const pageAccessToken = await dbFindPageAccessToken(req.body.entry[0].id)
+  // console.log('abcde:', body.object);
+  
 
   // Check the webhook event is from a Page subscription
   if (body.object === 'page') {
 
     body.entry.forEach(function(entry) {
+      // console.log('123', entry.messaging[0]);
 
       // Gets the body of the webhook event
       let webhook_event = entry.messaging[0];
     
       // Get the sender PSID
       let sender_psid = webhook_event.sender.id;
-      console.log('Sender PSID: ' + sender_psid);
+      // console.log('Sender PSID: ' + sender_psid);
       
       // Check if the event is a message or postback and
       // pass the event to the appropriate handler function
       if (webhook_event.message) {
-        console.log('1231111', webhook_event.message)
-        handleMessage(sender_psid, webhook_event.message);        
+        // console.log('1231111', webhook_event.message)
+        handleMessage(sender_psid, webhook_event.message, pageAccessToken);        
       } else if (webhook_event.postback) {
-        handlePostback(sender_psid, webhook_event.postback);
+        handlePostback(sender_psid, webhook_event.postback, pageAccessToken);
       }
 
     });
@@ -491,11 +538,15 @@ app.post('/webhook', (req, res) => {
     res.sendStatus(404);
   }
 
+  } catch(err){
+    console.log('12345', err);
+  }
+
 });
 
 
 // Handles messages events
-function handleMessage(sender_psid, received_message) {
+function handleMessage(sender_psid, received_message, accessToken) {
   let response;
 
   // Check if the message contains text
@@ -557,12 +608,12 @@ function handleMessage(sender_psid, received_message) {
     }
   } 
   // Sends the response message
-  callSendAPI(sender_psid, response);  
+  callSendAPI(sender_psid, response, accessToken);  
 }
 
 
 // Handles messaging_postbacks events
-function handlePostback(sender_psid, received_postback) {
+function handlePostback(sender_psid, received_postback, accessToken) {
   let response;
   // Get the payload for the postback
   let payload = received_postback.payload;
@@ -574,11 +625,11 @@ function handlePostback(sender_psid, received_postback) {
     response = { "text": "Oops, try sending another image." }
   }
   // Send the message to acknowledge the postback
-  callSendAPI(sender_psid, response);
+  callSendAPI(sender_psid, response, accessToken);
 }
 
 // Sends response messages via the Send API
-function callSendAPI(sender_psid, response) {
+function callSendAPI(sender_psid, response, accessToken) {
   // Construct the message body
   let request_body = {
     "recipient": {
@@ -591,7 +642,7 @@ function callSendAPI(sender_psid, response) {
     method: 'post',
     url: 'https://graph.facebook.com/v3.2/me/messages',
     headers: {
-      'Authorization' : `Bearer ${PAGE_ACCESS_TOKEN}`,
+      'Authorization' : `Bearer ${accessToken}`,
       'Content-Type': 'application/json'
     },
     data : request_body
@@ -601,7 +652,8 @@ function callSendAPI(sender_psid, response) {
 
 // 機器人相關內容
 
-// 建立連結 get_started ( post to facebook messenger platform)
+// 建立連結 get_started ( post to facebook messenger platform) 
+// payload = 'getStarted'
 function fbMessengerPlatformGetStarted(accessToken) {
   return new Promise((resolve, reject) => {
     // let accessToken = 'EAALux5Ptc6QBADQfic0MZCiRI3OiwZAHQF0nzHeZC3d8KUaV39UeocoIxt9K54wATrD03zqG2yNMLiimk3BeE5t3RtnZCp9J06LBFSL48KlPPzX5eHTRAqReP373x8GHPPpz6UR3ZApb2R5zfEHzYI5WSOvQ551SaFdJlBmjpCx3IqDQhoWbU'
@@ -624,9 +676,6 @@ function fbMessengerPlatformGetStarted(accessToken) {
       });
   });
 }
-
-// 建立 get_started wellcome message 
-
 
 
 app.listen('3001', () => {

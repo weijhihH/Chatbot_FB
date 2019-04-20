@@ -34,7 +34,8 @@ li.nav-item {
   border: 1px solid black;
 }
 
-#wellcomeMessageForm {
+#wellcomeMessageForm,
+#wellcomeMessageFormGreeting{
 
   display:none;
   
