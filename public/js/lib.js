@@ -7,7 +7,13 @@ let app={
   cst:{
     apiVersion: '1.0',
   },
-  profile:{}
+  profile:{},
+  greetingMessage:{
+    SubmitButtonStatus:null
+  },
+  buttonTemplate:{
+    numberOfSet: 1
+  }
 }
 
 app.fb.load= function() {
