@@ -489,7 +489,11 @@ app.get(`/api/${cst.API_VERSION}/webhook/wellcomeMessage/:pageId`, async (req, r
   }
   let queryResultForPageId = await queryResults(queryInput)
   // console.log(queryResultForPageId)
-  res.send({data:queryResultForPageId[0]})
+  if(queryResultForPageId.length === 0){
+    res.send({data: "NoData"})
+  } else{
+    res.send({data:queryResultForPageId[0]})
+  }
 })
 
 app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => {
@@ -504,6 +508,8 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
         }
       }
   }
+  // console.log('1000', req.body);
+  // console.log('1001', info.attachment.payload);
   // console.log('123123123123: ', info)
   const queryInput = {
     pageId: response.pageId,
@@ -511,6 +517,7 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
     payload: 'getStarted',
     info: JSON.stringify(info)
   }
+  console.log('1002', queryInput.info);
   try {
     let queryResultForPageId = await queryResults(queryInput)
     console.log('queryResultForPageId123: ', queryResultForPageId.length)
@@ -565,7 +572,7 @@ function queryResults (queryInput){
         if(error) {
           return reject(error)
         } else {
-          console.log('test1',result)
+          // console.log('test1',result)
           return resolve(result);
         }
       });
@@ -757,6 +764,39 @@ function fbMessengerPlatformGetStarted(accessToken) {
       });
   });
 }
+
+// // 存東西測試用
+// const testContent = {
+//   pageId:413245412820200,
+//   position:0,
+//   payload:'getStarted',
+//   info: JSON.stringify({
+//     "attachment":{
+//       "type":"template",
+//       "payload":{
+//         "template_type": "button",
+//         "text": '測試一下',
+//         "buttons": [
+//           {
+//             "type":"postback",
+//             "title":"666",
+//             "payload":"777",
+//           },
+//           {
+//             "type":"postback",
+//             "title":"888",
+//             "payload":"999",
+//           }
+//         ]
+//       }
+//     }
+//   })
+// }
+// db.query(`update sendMessage set ? where pageId = '${testContent.pageId}'`,testContent,(err, result) => {
+//   if(err)
+//   throw err;
+//   console.log(result)
+// })
 
 
 app.listen('3001', () => {

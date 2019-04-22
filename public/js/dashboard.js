@@ -14,7 +14,6 @@ $(document).ready(callback);
 function callback(){
   app.init();
   $(function(){
-
     // wellcome message button 處理
     $('.navWellcomeMessage').on('click',function(){
       fetch('/api/'+app.cst.apiVersion+'/webhook/wellcomeMessage/getInformation?pageId='+app.fb.pageId+'&payload=getStarted',{
@@ -24,17 +23,30 @@ function callback(){
         }
       }).then(res => res.json())
       .then((res) => {
-        let info = JSON.parse(res.data.info)
-        console.log(info);
-
-        $('#mainContent').append(wellcomeMessageContent());
-        $('#wellcomeMessageFormGreeting').hide(); 
-        $('#wellcomeMessageForm').show();
+        console.log(res);
+        // 如果資料庫沒有存任何 template
+        if(res.data === 'NoData'){
+          console.log('321')
+          $('#wellcomeMessageForm').remove() 
+          $('#mainContent').append(wellcomeMessageContent(res.data));
+          $('#wellcomeMessageFormGreeting').hide(); 
+          $('#wellcomeMessageForm').show();
+        } else {
+        // 資料庫已經有 template 資料, 取出來必且 render to html
+          let info = JSON.parse(res.data.info)
+          console.log(info);
+          if(info.attachment.payload.template_type === 'button'){
+            app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length
+            $('#wellcomeMessageForm').remove()
+            $('#mainContent').append(wellcomeMessageContent(info));
+            $('#wellcomeMessageFormGreeting').hide(); 
+            $('#wellcomeMessageForm').show();
+          }
+        }
       })
       .catch((err) => {
-        console.log('err');
+        console.log('err',err);
       })
-
     });
 
     // 處理 Wellcome sreen button 
@@ -73,12 +85,11 @@ function callback(){
         app.buttonTemplate.numberOfSet += 1
         console.log('app.buttonTemplate.numberOfSet',app.buttonTemplate.numberOfSet)
         let html = `<div class="form-row ">`
-        html += `<div class="col-4"><input type="text" class="form-control text" placeholder="按鈕名稱"></div>`
-        html += `<div class="col-4"><input type="text" class="form-control payload" placeholder="回覆按鈕"></div>`
-        html += `<div class="col-1.5"><button type="button" id="addButtonTemplate" class="btn btn-primary mb-2 addButton-${app.buttonTemplate.numberOfSet}">Add</button></div>`
-        html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="btn btn-primary mb-2 deleteButton-${app.buttonTemplate.numberOfSet}">Delete</button></div>`
+        html += `<div class="col-4"><input type="text" class="form-control text" placeholder="Button Name"></div>`
+        html += `<div class="col-4"><input type="text" class="form-control payload" placeholder="PostBack Name"></div>`
+        html += `<div class="col-1.5"><button type="button" id="addButtonTemplate" class="btn btn-primary mb-2 ">Add</button></div>`
+        html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="btn btn-primary mb-2 ">Delete</button></div>`
         html += `</div>`
-        // $(`div.form-row.block-${app.buttonTemplate.numberOfSet -1}`).after(html)
         $(this).closest('.form-row').after(html);
       }
     })
@@ -212,17 +223,33 @@ function wellcomeScreenContent(text){
 
 
 // wellcome message content 
-function wellcomeMessageContent(response){
-  let text = response
+// 下面邏輯考慮是否要從資料庫 render 資料進去
+// 1. if info = "NoData" , 表示資料庫沒有資料
+// 2. else , 表示資料庫有現成資料
+function wellcomeMessageContent(info){
   let html = `<form id="wellcomeMessageForm" class=" form-group" >`
-  html += `<label>Wellcome message</label>`
-  html += `<textarea class="form-control" id="wellcomeMessageTextArea" placeholder="Text" rows="1" ></textarea> `
-  html += `<div class="form-row block-1">`
-  html += `<div class="col-4"><input type="text" class="form-control text" placeholder="按鈕名稱"></div>`
-  html += `<div class="col-4"><input type="text" class="form-control payload" placeholder="回覆按鈕"></div>`
-  html += `<div class="col-1.5"><button type="button" id="addButtonTemplate" class="btn btn-primary mb-2 addButton-1">Add</button></div>`
-  html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="btn btn-primary mb-2 deleteButton-1">Delete</button></div>`
-  html += `</div>`
+  html += `<label>Button Template (下列 Button 選項需為 1~3 組)</label>`
+  html += `<textarea class="form-control" id="wellcomeMessageTextArea" placeholder="Text" rows="1" >`
+  if(info !== 'NoData'){
+    html += `${info.attachment.payload.text}`
+  }
+  html += `</textarea>`
+  for (let i=0; i< app.buttonTemplate.numberOfSet; i++){
+    html += `<div class="form-row">`
+    html += `<div class="col-4"><input type="text" class="form-control text" placeholder="Button Name" `
+    if(info !== 'NoData'){
+      html += `value="${info.attachment.payload.buttons[i].title}"`
+    }
+    html += `></div>`
+    html += `<div class="col-4"><input type="text" class="form-control payload" placeholder="PostBack Name"`
+    if(info !== 'NoData'){
+      html += `value="${info.attachment.payload.buttons[i].payload}"`
+    }
+    html += `></div>`
+    html += `<div class="col-1.5"><button type="button" id="addButtonTemplate" class="btn btn-primary mb-2 ">Add</button></div>`
+    html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="btn btn-primary mb-2 ">Delete</button></div>`
+    html += `</div>`
+  }
   html += `<button type="submit" id="wellcomeMessageButton" class="btn btn-primary mb-2">Submit</button>`
   html += `</form>`
   return html
