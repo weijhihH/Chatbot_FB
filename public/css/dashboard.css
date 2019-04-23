@@ -34,9 +34,15 @@ li.nav-item {
   border: 1px solid black;
 }
 
-#wellcomeMessageForm,
+/* #wellcomeMessageForm,
 #wellcomeMessageFormGreeting{
 
   display:none;
   
-  }
+  } */
+
+#wellcomeMessageTextArea,
+#wellcomeScreenTextArea,
+div.form-row {
+  margin-bottom: 5px;
+}

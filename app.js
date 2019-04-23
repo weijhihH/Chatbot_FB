@@ -734,7 +734,7 @@ function callSendAPI(sender_psid, response, accessToken) {
       'Content-Type': 'application/json'
     },
     data : request_body
-  }).then(res => console.log('res: ', 'ok'))
+  }).then(() => console.log('res: ', 'ok'))
   .catch(err => console.log('err: ', err))
 }
 

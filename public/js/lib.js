@@ -12,7 +12,11 @@ let app={
     SubmitButtonStatus:null
   },
   buttonTemplate:{
-    numberOfSet: 1
+    numberOfSet: 1,
+    SubmitButtonStatus:null
+  },
+  moreSets:{
+    numberOfSet:null,
   }
 }
 
