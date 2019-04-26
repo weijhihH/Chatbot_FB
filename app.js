@@ -483,11 +483,13 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
   }
 
 app.get(`/api/${cst.API_VERSION}/webhook/wellcomeMessage/:pageId`, async (req, res) => {
-  const queryInput = {
+  const input = {
     pageId:req.query.pageId,
     payload:req.query.payload
   }
-  let queryResultForPageId = await queryResults(queryInput)
+  const selectInput = `select * from sendMessage where pageId = '${input.pageId}' and payload = '${input.payload}'`
+
+  let queryResultForPageId = await querySelectResultsFromSendMessage(selectInput)
   // console.log(queryResultForPageId)
   if(queryResultForPageId.length === 0){
     res.send({data: "NoData"})
@@ -517,9 +519,9 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
     payload: 'getStarted',
     info: JSON.stringify(info)
   }
-  console.log('1002', queryInput.info);
   try {
-    let queryResultForPageId = await queryResults(queryInput)
+    const selectInput = `select * from sendMessage where pageId = '${queryInput.pageId}' and payload = '${queryInput.payload}'`
+    let queryResultForPageId = await querySelectResultsFromSendMessage(selectInput)
     console.log('queryResultForPageId123: ', queryResultForPageId.length)
     if ( queryResultForPageId.length === 0 ){
       // 資料庫中無資料, 需存入一筆新的
@@ -560,13 +562,12 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
 })
 
 // 用 pageId 確認是否在資料庫中
-function queryResults (queryInput){
+function querySelectResultsFromSendMessage (selectQuery){
   return new Promise((resolve, reject) => {
     db.getConnection((error, connection) => {
       if (error){
         return reject (error);
       }
-      let selectQuery = `select * from sendMessage where pageId = '${queryInput.pageId}' and payload = '${queryInput.payload}'`
       connection.query(selectQuery, (error ,result) => {
         connection.release();
         if(error) {
@@ -579,6 +580,57 @@ function queryResults (queryInput){
     })
   })
 }  
+
+// 更多設定頁面 api
+app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, (req, res) => {
+  const response = req.body;
+  // 先區分資料的來源
+  console.log('response', response);
+
+  
+  // 刪除資料
+  function moreSettingUpdated(insertContent){
+    return new Promise((resolve, reject) => {
+      db.getConnection((error, connection) => {
+        if (error){
+          return reject(error)
+        }
+        connection.beginTransaction((error) => {
+          if (error){
+            connection.release();
+            return reject(error)
+          }
+          const delQuery = `delete from sendMessage where pageId = '${pageId}' and source = 'moreSetting'`
+          connection.query(delQuery,(err) => {
+            if(err){
+              connection.release();
+              return connection.rollback(() => {
+                reject(error)
+              })
+            }
+            const insertQuery = `insert into sendMessage set ?`
+            connection.query(updateQuery, insertContent, (err, result) => {
+              connection.release();
+              if(err){
+                return connection.rollback(() => {
+                  reject(error)
+                })
+              }
+              connection.commit((error) => {
+                if(error) {
+                  return connection.rollback(() => {
+                    reject(error)
+                  })
+                }
+                return resolve(result);
+              }) 
+            })
+          })
+        })
+      })
+    })
+  }
+})
 
 
 // Creates the endpoint for our webhook 

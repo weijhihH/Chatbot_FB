@@ -110,23 +110,11 @@ function callback(){
         html += `</select></div>`
 
         html += `<div class="col-1.5"><button type="button" id="addButtonTemplate" class="addButtonTemplate btn btn-primary btn-sm ">Add</button></div>`
-        html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="deleteButtonTemplate btn btn-primary btn-sm ">Delete</button></div>`
+        html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="btn-danger deleteButtonTemplate btn btn-primary btn-sm ">Delete</button></div>`
         html += `</div>`
         $(this).closest('.form-row').after(html);
       }
     })
-
-
-
-
-
-
-
-
-
-
-
-
 
     $('#mainContent').on("click","#deleteButtonTemplate", function (event) {
       if(app.buttonTemplate.numberOfSet > 1) {
@@ -243,7 +231,7 @@ function callback(){
         buttons.push(obj);
       }
       console.log('1923i102i30', buttons)
-      const wellcomeMessageTextArea = $('#wellcomeMessageTextArea').val()
+      const text = $('.text').val()
       // 
       // End 處理 ajax input datas
       // 
@@ -258,7 +246,7 @@ function callback(){
           "data":
           {
             "message_type": "button",
-            "text": wellcomeMessageTextArea,
+            "text": text,
             "buttons": buttons,
           },
             "position": position,
@@ -290,21 +278,20 @@ function callback(){
       console.log('1')
 
       delForm();
-      $('#mainContentMoreSetting').append(addSets());
+      $('#mainContent').append(addSets());
     })
 
     // 按下增加按鈕 (新增組數)
-    $('#mainContentMoreSetting').on('click','#addNewSetButton', function () {
-      const buttonType = $('#inlineFormCustomSelect').val()
+    $('#mainContent').on('click','#addNewSetButton', function () {
+      const buttonType = $('#addNewSetSelector').val()
       console.log('buttonType',buttonType)
-      let html;
       if(buttonType === 'textResponse'){
         console.log('textResponse')
-        app.moreSets.numberOfSet += 1;
-        html += textResponse();
-        $('#mainContentMoreSetting').prepend(textResponse());
+        $('#mainContent').prepend(textResponse());
       } else if (buttonType === 'buttonTemplate'){
         console.log('buttonTemplate')
+        $('#mainContent').prepend(wellcomeMessageContent('NoData', true));
+        $('.form-control').prop('readonly', false);
 
       } else {
         alert('請選擇一種類型')
@@ -313,47 +300,137 @@ function callback(){
     })
 
     // 操作 Up botton
-    $('#mainContentMoreSetting').on('click','.upButton', function () {
+    $('#mainContent').on('click','.upButton', function () {
       // 當前操作的父層編號
       const parentDiv = $(this).parent('form')
-      // 當前操作的父層對應的上一個 div 中 index 編號
-      const index = parseInt($(this).parent().attr("index"))
-      const indexPre = parseInt($(this).parent().prev().attr("index"))
-      console.log('index',index)
-      console.log('indexPre',indexPre)
-      // 判別是否是第一個 div , 如果 index 結果跑出 NaN, 代表前一個 div 沒有值了
-      if(indexPre || indexPre === 0){
-        // 交換 Index 編號
-        parentDiv.attr("index",`${index-1}`)
-        parentDiv.prev().attr("index",`${index}`)
+      let divIndex = $(this).parent('.moreSettingDiv').index();
+      if(divIndex > 0){
         // 交換位置
         parentDiv.prev().insertAfter(parentDiv)  
       }
     })
 
     // 操作 Down botton
-    $('#mainContentMoreSetting').on('click','.downButton', function () {
+    $('#mainContent').on('click','.downButton', function () {
       // 當前操作的父層編號
       const parentDiv = $(this).parent('form')
-      // 當前操作的父層對應的上一個 div 中 index 編號
-      const index = parseInt($(this).parent().attr("index"))
-      const indexNext = parseInt($(this).parent().next().attr("index"))
-      console.log('indexPre',Boolean(indexNext))
-      // 判別是否是第一個 div , 如果 index 結果跑出 NaN, 代表前一個 div 沒有值了
-      if(indexNext){
-        // 交換 Index 編號
-        parentDiv.attr("index",`${index+1}`)
-        parentDiv.next().attr("index",`${index}`)
+      const divIndex = $(this).parent('.moreSettingDiv').index();
+      const divLength = $(this).parent('.moreSettingDiv').length;
+      // 判斷邏輯, div 位置 跟 div數量判斷
+      if(divIndex < divLength ){
         // 交換位置
         parentDiv.next().insertBefore(parentDiv) 
       }
     })
+
     // 操作 delete dutton - more setting 
-    $('#mainContentMoreSetting').on('click','.deleteButton', function () {
+    $('#mainContent').on('click','.deleteButton', function () {
       console.log('123')
       $(this).closest('.moreSettingDiv').remove();
       let a = $(this).parent().index('.moreSettingDiv')
       console.log('1234444',a)
+    })
+
+    // 操作 submit button - more setting 
+    // 將資料送到後台
+    $('#mainContent').on('click','button#submitFormButton', function () {
+      event.preventDefault();
+      // data , 整理輸入資料
+      let data = [];
+      // 1. 判斷輸入資料比數
+      $('.moreSettingDiv').each(function(index){
+        // event : message or attachment
+        let event = $(this).attr('eventType')
+        // handleType = message or postback (定義是針對 message or postback event 回覆)
+        let handleType = $('input.form-control.payload').attr('handleType')
+        // console.log('index', index)
+        console.log('event', event);
+        // 考慮不同情況整理資料
+        // 當輸入訊息是 message 的時候 ; 非 postback event , 且是一般訊息回覆
+        let payload = $(this).find('.payload').val()
+        let text = $(this).find('.text').val()
+        let source = "moreSetting"
+        let pageId = app.fb.pageId
+        if( event === 'message'){
+          // console.log('payload', payload)
+          // console.log('text', text)
+          data.push({
+            "source": source,
+            "pageId": pageId,
+            "position": index,
+            "event": event, // event : message or attachment
+            "payload": payload,
+            "handleType": handleType,
+            "message": {
+                "text": text
+              }
+          })
+        } else if(event === 'attachment') {
+          console.log(`blockType === 'buttonTemplate'`)
+          // 處理 button template 中的 button 資料
+          const textArr = [];
+          const payloadArr = [];
+          const payloadType = [];
+          $('.payload-type').each(function(i){
+            payloadType.push($(this).find(":selected").val())
+          })
+          $('input.form-control.text').each(function(i){
+            textArr.push($(this).val())
+          })
+          $('input.form-control.payload').each(function(i){
+            payloadArr.push($(this).val())
+          })
+          const buttons = [];
+          for (let i =0; i< textArr.length ; i++){
+            const obj = {};        
+            obj.type = payloadType[i];
+            obj.title = textArr[i];
+            if(obj.type === 'web_url'){
+              obj.url = payloadArr[i];
+            } else if (obj.type === 'postback'){
+              obj.payload = payloadArr[i]
+            }
+            buttons.push(obj);
+          }
+        
+          data.push({
+            "source": source,
+            "pageId": pageId,
+            "position": index,
+            "event": event, // event : message or attachment
+            "payload": payload,
+            "handleType": handleType,
+            "message":
+              {
+                "template_type": "button",
+                "text": text,
+                "buttons": buttons,
+              }
+          })
+        }
+
+
+
+      })
+      console.log('data output', data);
+      
+      // 2. 整理輸入資料格式
+      fetch('/api/'+app.cst.apiVersion+'/webhook/moreSetting',{
+        method:'POST',
+        headers:{
+          'Authorization': 'Bearer '+ accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          "data": data
+        })
+      })
+      .then((res) => {
+        console.log('ok',res);
+      })    
+      .catch((err) => {
+        console.log('error', err);
+      })
     })
 
   })
@@ -364,7 +441,7 @@ function callback(){
 
 // wellcome screen content
 function wellcomeScreenContent(text){
-  let html = `<form id="wellcomeMessageFormGreeting " class=" form-group delForm" >`
+  let html = `<form id="wellcomeMessageFormGreeting " class=" form-group delForm" divId="new">`
   html += `<label for="wellcomeMessageTextArea">Wellcome message - Greeting - 使用者第一次要開始聊天的時候會顯示的訊息</label>`
   if( text === 'NoData'){
     html += `<textarea class="form-control" id="wellcomeScreenTextArea" rows="10" placeholder="${text}" ></textarea>`
@@ -381,50 +458,70 @@ function wellcomeScreenContent(text){
 // 下面邏輯考慮是否要從資料庫 render 資料進去
 // 1. if info = "NoData" , 表示資料庫沒有資料
 // 2. else , 表示資料庫有現成資料
-function wellcomeMessageContent(info){
-  let html = `<form id="wellcomeMessageForm " class=" form-group delForm" >`
+function wellcomeMessageContent(info,addNewSet = false){
+  let html = `<form id="wellcomeMessageForm " class=" form-group delForm moreSettingDiv" eventType="attachment" divId="new">`
+  if(addNewSet){
+    html += `<button type="button" class="btn btn-sm btn-danger deleteButton">Delete</button>`
+    html += `<button type="button" class="btn btn-sm btn-success upButton">Up</button>`
+    html += `<button type="button" class="btn btn-sm btn-success downButton">Down</button>`
+  }
   html += `<label>Button Template (下列 Button 選項需為 1~3 組)</label>`
-  html += `<textarea class="form-control" id="wellcomeMessageTextArea" placeholder="Text" rows="1" readonly>`
+  if(addNewSet){
+    html += `<input type="text" class="form-control payload" handleType="postback" placeholder="message event" rows="1" readonly>`
+  }
+  html += `<textarea class="form-control text" placeholder="Text" rows="1" readonly>`
   if(info !== 'NoData'){
     html += `${info.attachment.payload.text}`
   }
   html += `</textarea>`
+  
   // 判斷 button 組數, 並且 render 進去
   for (let i=0; i< app.buttonTemplate.numberOfSet; i++){
-    console.log('12323', info.attachment.payload.buttons[i].type)
+    // console.log('12323', info.attachment.payload.buttons[i].type)
     html += `<div class="form-row">`
     html += `<div class="col-3"><input type="text" class="form-control text" placeholder="Button Name" `
     if(info !== 'NoData'){
       html += `value="${info.attachment.payload.buttons[i].title}"`
     }
     html += `readonly ></div>`
-    html += `<div class="col-3"><input type="text" class="form-control payload" placeholder="PostBack Name"`
-    if(info !== 'NoData'){
-      html += `value="${info.attachment.payload.buttons[i].payload}"`
+    
+    if(info === 'NoData'){
+      console.log('111',i)
+      html += `<div class="col-3"><input type="text" class="form-control payload" placeholder="PostBack Name" readonly ></div>`
+    } else if (info !== 'NoData' && info.attachment.payload.buttons[i].type === "postback"){
+      // button 為 postback 類型
+      html += `<div class="col-3"><input type="text" class="form-control payload" placeholder="PostBack Name"`
+      html += `value="${info.attachment.payload.buttons[i].payload}" readonly ></div>`
+    } else if (info !== 'NoData' && info.attachment.payload.buttons[i].type === "web_url"){
+      // button 為 payload 類型
+      html += `<div class="col-3"><input type="text" class="form-control payload" placeholder="PostBack Name" `
+      html += `value="${info.attachment.payload.buttons[i].url}" readonly ></div>`
     }
-    html += `readonly ></div>`
+
     html += `<div class="col-1.5">`
     html += `<select class="payload-type custom-select mr-sm-2" id="inlineFormCustomSelect" >`
     // render to selected button
     html += `<option selected>按鈕類型</option>`
-    if(info.attachment.payload.buttons[i].type === "postback"){
+
+    if(info === 'NoData') {
+      html += `<option value="postback">回傳按鈕</option>`
+      html += `<option value="web_url">url</option>`
+    } else if(info.attachment.payload.buttons[i].type === "postback"){
       html += `<option value="postback" selected="selected">回傳按鈕</option>`
       html += `<option value="web_url">url</option>`
     } else if (info.attachment.payload.buttons[i].type === "web_url"){
       html += `<option value="postback">回傳按鈕</option>`
       html += `<option value="web_url" selected="selected">url</option>`
-    } else {
-      html += `<option value="postback">回傳按鈕</option>`
-      html += `<option value="web_url">url</option>`
     }
+
     html += `</select></div>`
     html += `<div class="col-1.5"><button type="button" id="addButtonTemplate" class="addButtonTemplate btn btn-primary btn-sm ">Add</button></div>`
-    html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="deleteButtonTemplate btn btn-primary btn-sm ">Delete</button></div>`
+    html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="btn-danger deleteButtonTemplate btn btn-primary btn-sm ">Delete</button></div>`
     html += `</div>`
   }
-  if(info === 'NoData'){
+  if(info === 'NoData' && addNewSet === false){
     html += `<button type="submit" id="wellcomeMessageSubmitButton" class="btn btn-primary mb-2">Submit</button>`
-  } else {
+  } else if (info !== 'NoData'){
     html += `<button type="submit" id="wellcomeMessageEditButton" class="btn btn-primary mb-2 ">Edit</button>`
   }
   html += `</form>`
@@ -439,7 +536,7 @@ function addSets(){
       <div class="form-row align-items-center">
         <label class="col-auto mr-sm-2" for="inlineFormCustomSelect">Button Type</label>
         <div class="col-auto my-1">
-          <select class="custom-select mr-sm-2" id="inlineFormCustomSelect">
+          <select class="custom-select mr-sm-2" id="addNewSetSelector">
             <option selected>Button Type...</option>
             <option value="textResponse">回傳文字範本</option>
             <option value="buttonTemplate">回傳按鈕範本</option>
@@ -456,21 +553,20 @@ function addSets(){
 // 文字範本
 function textResponse (){
   let html;
-  let index = app.moreSets.numberOfSet;
   // 在 lib.js naming #index
-  html = `<form class='moreSettingDiv' index=${index} class ="delForm">`
+  html = `<form class="moreSettingDiv delForm" eventType="message" divId="new">`
   html += `<div class="form-group">`
+  html += `<button type="button" class="btn btn-sm btn-danger deleteButton">Delete</button>`
+  html += `<button type="button" class="btn btn-sm btn-success upButton">Up</button>`
+  html += `<button type="button" class="btn btn-sm btn-success downButton">Down</button>`
   html += `<label for="textResponse">Text Response</label>`
-  html += `<input type="text" class="form-control" placeholder="接收到的 postback event name">`
+  html += `<input type="text" class="form-control payload" handleType="message" placeholder="message event">`
   html += `<small class="form-text text-muted"></small>`
-  html += `<input type="text" class="form-control" placeholder="接收到的 postback event name">`
+  html += `<input type="text" class="form-control text" placeholder="輸入傳出去的文字">`
   html += `<small class="form-text text-muted"></small>`
-  html += `</div>`
   // html += `<button type="button" class="btn btn-primary EditButton">Edit</button>`
   // html += `<button type="button" class="btn btn-primary SubmitButton">Submit</button>`
-  html += `<button type="button" class="btn btn-danger deleteButton">Delete</button>`
-  html += `<button type="button" class="btn btn-success upButton">Up</button>`
-  html += `<button type="button" class="btn btn-success downButton">Down</button>`
+  html += `</div>`
   html += `</form>`
   return html;
 }

@@ -14,9 +14,6 @@ let app={
   buttonTemplate:{
     numberOfSet: 1,
     SubmitButtonStatus:null
-  },
-  moreSets:{
-    numberOfSet:null,
   }
 }
 
