@@ -13,6 +13,9 @@ let app={
   },
   buttonTemplate:{
     numberOfSet: 1,
+    SubmitButtonStatus:null,
+  },
+  moreSetting:{
     SubmitButtonStatus:null
   }
 }

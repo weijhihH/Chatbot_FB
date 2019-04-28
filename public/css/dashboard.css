@@ -46,3 +46,17 @@ li.nav-item {
 div.form-row {
   margin-bottom: 5px;
 }
+
+div#mainContent{
+  margin-left: 10px;
+}
+
+.form-row{
+  margin-top: 5px;
+}
+.form-control{
+  margin-bottom: 5px;
+}
+.btn{
+  margin-right: 3px;
+}

@@ -105,13 +105,6 @@ function pageSubscribed(data) {
   });
 }
 
-// 找 pages 內所有資訊
-function selectPagesInfromation() {
-  db.query('select * from pages', (error, result) => {
-    if (error) throw error;
-    return (result);
-  });
-}
 
 // 將會員資訊存入DB
 app.get(`/api/${cst.API_VERSION}/signin`, (req, res) => {
@@ -516,9 +509,13 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
   const queryInput = {
     pageId: response.pageId,
     position: response.position,
-    payload: 'getStarted',
+    handleType: response.handleType,
+    event: response.event,
+    payload: response.payload,
+    source: response.source,
     info: JSON.stringify(info)
   }
+  console.log('12312312', queryInput);
   try {
     const selectInput = `select * from sendMessage where pageId = '${queryInput.pageId}' and payload = '${queryInput.payload}'`
     let queryResultForPageId = await querySelectResultsFromSendMessage(selectInput)
@@ -581,47 +578,144 @@ function querySelectResultsFromSendMessage (selectQuery){
   })
 }  
 
+
+app.get(`/api/${cst.API_VERSION}/webhook/moreSetting/:pageId`, async(req, res) => {
+  try {
+    const pageId = req.query.pageId
+    const selectQuery = `select * from sendMessage where pageId = '${pageId}' and source = 'moreSetting'`
+    const queryResult = await findDataFromDB(selectQuery);
+    console.log('queryResult', queryResult.length)
+    if(queryResult.length === 0){
+      res.send({data: 'NoData'})
+    } else {
+      res.send({data: queryResult})
+    }
+  } catch(error){
+    console.log('error', error)
+    res.send({'error': 'someting error happened'})
+  }
+  // 找資料
+  function findDataFromDB (query){
+    return new Promise((resolve,reject) => {
+      db.query(query, (error, result) => {
+        if (error){
+          return reject (error)
+        }
+        return resolve(result)
+      })
+    })
+  }
+})
+
+
 // 更多設定頁面 api
-app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, (req, res) => {
+app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
   const response = req.body;
   // 先區分資料的來源
-  console.log('response', response);
+  console.log('response pageId', response.data);
+  try{
+  // 整理要寫入 db 的資料
+  let inputContent = await insertContent(response.data);
+  console.log('123213',inputContent)
+  let result = await moreSettingUpdated(req.body.data[0].pageId, inputContent)
+  console.log('result',result);
+  res.send()
+  } catch(error){
+    console.log('err',error)
+  }
+
+  // 整理前端送進來的資料 - moreSetting
+  function insertContent(input){
+
+    const insertContent = [];
+    return new Promise((resolve) => {
+      input.forEach(e => {
+        const arr= [e.pageId,e.position,e.handleType,e.event,e.payload,e.source];
+        // obj.pageId= e.pageId;
+        // obj.position= e.position;
+        // obj.handleType = e.handleType;
+        // obj.event= e.event;
+        // obj.payload= e.payload;
+        // obj.source= e.source;
+        if(e.event === 'message'){
+          // obj.info= JSON.stringify(e.message)
+          arr.push(JSON.stringify(e.message));
+        } else if (e.event === 'attachment'){
+          // obj.info= JSON.stringify({
+          //   "attachment":{
+          //     "type":"template",
+          //     "payload":{
+          //       "template_type": e.message.template_type,
+          //       "text": e.message.text,
+          //       "buttons": e.message.buttons
+          //       }
+          //   }
+          // })
+          const info = JSON.stringify({
+            "attachment":{
+              "type":"template",
+              "payload":{
+                "template_type": e.message.template_type,
+                "text": e.message.text,
+                "buttons": e.message.buttons
+                }
+            }
+          })
+          arr.push(info);
+        }
+        insertContent.push(arr);
+        return resolve(insertContent);
+      })
+    })
+  }
+
+  
 
   
   // 刪除資料
-  function moreSettingUpdated(insertContent){
+  function moreSettingUpdated(pageId,insertContent){
+    console.log('888', pageId)
+    console.log('999', insertContent)
     return new Promise((resolve, reject) => {
       db.getConnection((error, connection) => {
         if (error){
+          console.log('1')
           return reject(error)
         }
         connection.beginTransaction((error) => {
           if (error){
+            console.log('2')
+
             connection.release();
             return reject(error)
           }
           const delQuery = `delete from sendMessage where pageId = '${pageId}' and source = 'moreSetting'`
-          connection.query(delQuery,(err) => {
-            if(err){
+          connection.query(delQuery,(error) => {
+            if(error){
+              console.log('3')
               connection.release();
               return connection.rollback(() => {
                 reject(error)
               })
             }
-            const insertQuery = `insert into sendMessage set ?`
-            connection.query(updateQuery, insertContent, (err, result) => {
+            // const insertQuery = `insert into sendMessage set ?`
+            const insertQuery = "insert into sendMessage (`pageId`,`position`,`handleType`,`event`,`payload`,`source`,`info`) values ?"
+            connection.query(insertQuery, [insertContent], (error, result) => {
               connection.release();
-              if(err){
+              if(error){
+                console.log('4',error)
                 return connection.rollback(() => {
                   reject(error)
                 })
               }
               connection.commit((error) => {
                 if(error) {
+                  console.log('5')
                   return connection.rollback(() => {
                     reject(error)
                   })
                 }
+                console.log('6', result);
                 return resolve(result);
               }) 
             })
@@ -659,14 +753,17 @@ app.post('/webhook', async (req, res) => {
       
       // Check if the event is a message or postback and
       // pass the event to the appropriate handler function
+      let response;
       if (webhook_event.message) {
         // console.log('1231111', webhook_event.message)
-        handleMessage(sender_psid, webhook_event.message, pageAccessToken);        
+        response = await handleMessage(pageId, webhook_event.message);       
+        // callSendAPI(sender_psid, response, pageAccessToken)
+ 
       } else if (webhook_event.postback) {
-        let reponse = await handlePostback(pageId, webhook_event.postback);
-        
-        callSendAPI(sender_psid, reponse, pageAccessToken)
+        // response 包裝成 array , 要考慮可能一次回超過一句 
+        response = await handlePostback(pageId, webhook_event.postback);
       }
+      callSendAPI(sender_psid, response, pageAccessToken)
     });
 
     // Return a '200 OK' response to all events
@@ -683,49 +780,48 @@ app.post('/webhook', async (req, res) => {
 
 });
 
+// // backup
+// // Handles messages events
+// function handleMessage(sender_psid, received_message, accessToken) {
+//   let response;
 
-// Handles messages events
-function handleMessage(sender_psid, received_message, accessToken) {
-  let response;
+//   // Check if the message contains text
+//   if (received_message.text) {    
 
-  // Check if the message contains text
-  if (received_message.text) {    
+//     // // Create the payload for a basic text message
 
-    // // Create the payload for a basic text message
-
-    response = {"text": "What are you up to?"}
+//     response = {"text": "What are you up to?"}
   
-  } else if (received_message.attachments) {
-    // Get the URL of the message attachment
-    let attachment_url = received_message.attachments[0].payload.url;
-    response = {
-      "attachment": {
-        "type": "template",
-        "payload": {
-          "template_type": "generic",
-          "elements": [{
-            "title": "Is this the right picture?",
-            "subtitle": "Tap a button to answer.",
-            "image_url": attachment_url,
-            "buttons": [
-              {
-                "type": "postback",
-                "title": "Yes!",
-                "payload": "yes",
-              },
-              {
-                "type": "postback",
-                "title": "No!",
-                "payload": "no",
-              }
-            ],
-          }]
+//   } else if (received_message.attachments) {
+//     // Get the URL of the message attachment
+//     response = [{"text": "抱歉~看不懂這是什麼???"}]
+//   // Sends the response message
+//   callSendAPI(sender_psid, response, accessToken);  
+// }
+
+// backup
+// Handles messages events
+function handleMessage(pageId, received_message) {
+  return new Promise((resolve, reject) => {
+  let payload = received_postback.payload;
+  console.log('payload',payload)
+  // Check if the message contains text
+    if (received_message.text){
+      let query = `select * from sendMessage where pageId = '${pageId}' and payload = '${payload}' and handleType = 'message'`
+      db.query(query, (error, result) => {
+        if(error) {
+          return reject (error);
         }
-      }
+        if(result.length !==0){
+          const response = result.map( e => JSON.parse(e.info))
+          console.log('response', response)
+          return resolve(response)
+        } else {
+          return resolve ({ "text": "看不懂你在幹嘛啊~~~"})
+        }
+      })
     }
-  } 
-  // Sends the response message
-  callSendAPI(sender_psid, response, accessToken);  
+  })
 }
 
 
@@ -745,50 +841,95 @@ function handleMessage(sender_psid, received_message, accessToken) {
 //   callSendAPI(sender_psid, response, accessToken);
 // }
 
+
+
 function handlePostback(pageId, received_postback) {
   return new Promise((resolve, reject) => {
     // Get the payload for the postback
     let payload = received_postback.payload;
+    console.log('payload',payload)
     // 從資料找到對應到 payload 的資料
-    let query = `select * from sendMessage where pageId = '${pageId}' and payload = '${payload}'`
+    let query = `select * from sendMessage where pageId = '${pageId}' and payload = '${payload}' and handleType = 'postback'`
     // Set the response based on the postback payload
     db.query(query, (error, result) => {
       if (error) {
         return reject (error);
       }
       if (result.length !== 0){
-        let response = JSON.parse(result[0].info);
+        const response = result.map( e => JSON.parse(e.info))
+        console.log('response', response)
         return resolve(response)
       } else {
-        return resolve ({ "text": "看不懂你在幹嘛啊~~~"})
+        return resolve ([{ "text": "看不懂你在幹嘛啊~~~"}])
       }
     })
-  
   })
 }
 
+
+// 測試範例,可以刪除
+// let query = `select * from sendMessage where pageId = '413245412820200' and handleType = 'message'`
+// db.query(query, (error, result) => {
+//   if (error) {
+//     return reject (error);
+//   }
+//   if (result.length !== 0){
+//     const map1 = result.map(e => JSON.parse(e.info))
+//     console.log('99999',map1)
+//   } else {
+//     return console.log('999')
+//   }
+// })
+
 // Sends response messages via the Send API
 function callSendAPI(sender_psid, response, accessToken) {
-  // Construct the message body
-  let request_body = {
-    "recipient": {
-      "id": sender_psid
-    },
-    "message": response
-  };
-  console.log('999',request_body)
-  // 回傳訊息給 page
-  axios({
-    method: 'post',
-    url: 'https://graph.facebook.com/v3.2/me/messages',
-    headers: {
-      'Authorization' : `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    data : request_body
-  }).then(() => console.log('res: ', 'ok'))
-  .catch(err => console.log('err: ', err))
+  response.forEach(arr => {
+    // Construct the message body
+    let request_body = {
+      "recipient": {
+        "id": sender_psid
+      },
+      "message": arr
+    };
+    console.log('999',request_body)
+    // 回傳訊息給 page
+    axios({
+      method: 'post',
+      url: 'https://graph.facebook.com/v3.2/me/messages',
+      headers: {
+        'Authorization' : `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      data : request_body
+    }).then(() => console.log('res: ', 'ok'))
+    .catch(err => console.log('err: ', err))
+  })
 }
+
+// // backup 
+// // Sends response messages via the Send API
+// function callSendAPI(sender_psid, response, accessToken) {
+//   // Construct the message body
+//   let request_body = {
+//     "recipient": {
+//       "id": sender_psid
+//     },
+//     "message": response
+//   };
+//   console.log('999',request_body)
+//   // 回傳訊息給 page
+//   axios({
+//     method: 'post',
+//     url: 'https://graph.facebook.com/v3.2/me/messages',
+//     headers: {
+//       'Authorization' : `Bearer ${accessToken}`,
+//       'Content-Type': 'application/json'
+//     },
+//     data : request_body
+//   }).then(() => console.log('res: ', 'ok'))
+//   .catch(err => console.log('err: ', err))
+// }
+
 
 // 機器人相關內容
 

@@ -30,7 +30,7 @@ function callback(){
         // Server's data render to html
         let text;
         let response = res.data
-        console.log(res);
+        console.log(res.data);
         if(response === 'NoData'){
           text = '請輸入問候語'
           $('#mainContent').append(wellcomeScreenContent(text));
@@ -92,6 +92,48 @@ function callback(){
         console.log('err',err);
       })
     });
+
+    // render the data to html after click the "更多設定" button.
+    $('.navMoreSetting').on('click', function () {
+      delForm();
+      $('#mainContent').append(addSets());
+      console.log('.navMoreSetting')
+      fetch(`/api/${app.cst.apiVersion}/webhook/moreSetting/getInformation?pageId=${app.fb.pageId}`,{
+        method:'GET',
+        headers:{
+          'Authorization': 'Bearer '+ accessToken,
+        }
+      })
+      .then(res => res.json())
+      .then(res => {
+        console.log('response',res.data)
+        // data not found in db 
+        if (res.data === 'NoData'){
+          console.log('data not found in db.')
+        } else{
+          // 資料庫有資料, 判斷資料型態 (attachment or message)
+          res.data.forEach(e => {
+            console.log('element', e);
+            if(e.event === 'attachment'){
+              console.log('attachment')
+              const payload = e.payload
+              const info = JSON.parse(e.info)
+              $('#mainContent').append(wellcomeMessageContent(info,true,payload))
+            } else if (e.event === 'message'){
+              $('#mainContent').append(textResponse(e,true))
+            }
+          });
+          // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
+          $('.btn').prop('disabled', true)
+          $('.form-control').prop('readonly', true)
+          $('.custom-select').prop('disabled', true);
+          $('#editFormButton').prop('disabled', false);
+        }
+      })
+      .catch(err => {
+        console.log('err',err)
+      })
+    })
     
     // 控制 Wellcome Message 內的 Add and Delete Button
     $('#mainContent').on("click","#addButtonTemplate", function () {
@@ -138,6 +180,21 @@ function callback(){
         $('#wellcomeScreenSubmitButton').prop('disabled', false);
       }
     })
+
+        // DOM event for Greeting message edit button;
+        $('#mainContent').on("click", "#editFormButton", function () {
+          console.log('12321')
+          if(app.moreSetting.SubmitButtonStatus === null || app.moreSetting.SubmitButtonStatus === true){
+            $('.btn').prop('disabled', false) // 解除按鈕鎖定
+            $('.form-control').prop('readonly', false);
+            $('.custom-select').prop('disabled', false);
+            $('#editFormButton').prop('disabled', true);
+            $('#submitFormButton').prop('disabled', false);
+            app.moreSetting.SubmitButtonStatus = true
+          }
+        })
+
+
 
     // DOM event for wellcome screen's submit button;
     $('#mainContent').on("click", "#wellcomeScreenSubmitButton", function (event) {
@@ -202,8 +259,6 @@ function callback(){
       const textArr = [];
       const payloadArr = [];
       const payloadType = [];
-      // 將submit 按鈕失效
-      $('#wellcomeMessageSubmitButton').prop('disabled', true);
       // 
       // 處理 ajax input datas
       // 
@@ -219,6 +274,12 @@ function callback(){
       event.preventDefault();
       const buttons = [];
       const position = 0;
+      const source = "wellcomeMessage";
+      const pageId = app.fb.pageId;
+      const handleType = "postback";
+      const eventType = $(this).parent().attr('eventtype');
+      const payload = "getStarted";
+
       for (let i =0; i< textArr.length ; i++){
         const obj = {};        
         obj.type = payloadType[i];
@@ -250,13 +311,18 @@ function callback(){
             "buttons": buttons,
           },
             "position": position,
-            "pageId": app.fb.pageId
+            "pageId": pageId,
+            "source": source,
+            "handleType": handleType,
+            "event": eventType,
+            "payload": payload
         })
       })
       .then(res => res.json())
       .then((res) => {
         $('.form-control').prop('readonly', true);
         $('#wellcomeMessageEditButton').prop('disabled', false);
+        $('#wellcomeMessageSubmitButton').prop('disabled', true);
         $('div.form-row').each(function(){
           $('.addButtonTemplate').prop('disabled', true);
           $('.deleteButtonTemplate').prop('disabled', true);
@@ -272,25 +338,16 @@ function callback(){
       }) // end of fetch
     }) // end of wellcomeMessageForm 處理
 
-    // More Setting button
-    $('.navMoreSetting').on('click',function () {
-      // render 新增選項 
-      console.log('1')
-
-      delForm();
-      $('#mainContent').append(addSets());
-    })
-
     // 按下增加按鈕 (新增組數)
     $('#mainContent').on('click','#addNewSetButton', function () {
       const buttonType = $('#addNewSetSelector').val()
       console.log('buttonType',buttonType)
       if(buttonType === 'textResponse'){
         console.log('textResponse')
-        $('#mainContent').prepend(textResponse());
+        $('#mainContent').append(textResponse());
       } else if (buttonType === 'buttonTemplate'){
         console.log('buttonTemplate')
-        $('#mainContent').prepend(wellcomeMessageContent('NoData', true));
+        $('#mainContent').append(wellcomeMessageContent('NoData', true));
         $('.form-control').prop('readonly', false);
 
       } else {
@@ -302,8 +359,9 @@ function callback(){
     // 操作 Up botton
     $('#mainContent').on('click','.upButton', function () {
       // 當前操作的父層編號
-      const parentDiv = $(this).parent('form')
-      let divIndex = $(this).parent('.moreSettingDiv').index();
+      const parentDiv = $(this).closest('.moreSettingDiv')
+      // 找出所有父層, 並且看 button 位置是第幾個
+      const divIndex = $(this).parents('.moreSettingDiv').index()
       if(divIndex > 0){
         // 交換位置
         parentDiv.prev().insertAfter(parentDiv)  
@@ -313,11 +371,14 @@ function callback(){
     // 操作 Down botton
     $('#mainContent').on('click','.downButton', function () {
       // 當前操作的父層編號
-      const parentDiv = $(this).parent('form')
-      const divIndex = $(this).parent('.moreSettingDiv').index();
-      const divLength = $(this).parent('.moreSettingDiv').length;
+      const parentDiv = $(this).closest('.moreSettingDiv')
+      // 找出所有父層, 並且看 button 位置是第幾個
+      const divIndex = $(this).parents('.moreSettingDiv').index()
+      // 符合條件的 div 有幾個
+      const divLength = $('.moreSettingDiv').length;
+
       // 判斷邏輯, div 位置 跟 div數量判斷
-      if(divIndex < divLength ){
+      if(divIndex < divLength-1 ){
         // 交換位置
         parentDiv.next().insertBefore(parentDiv) 
       }
@@ -427,9 +488,17 @@ function callback(){
       })
       .then((res) => {
         console.log('ok',res);
+        // 成功, 將送出表單按鈕隱藏起來
+        $('#submitFormButton').prop('disabled', true);
+        $('.btn').prop('disabled', true);
+        $('.form-control').prop('readonly', true);
+        $('.custom-select').prop('disabled', true);
+        $('#editFormButton').prop('disabled', false);
+
       })    
       .catch((err) => {
         console.log('error', err);
+        alert('資料存入失敗')
       })
     })
 
@@ -458,7 +527,7 @@ function wellcomeScreenContent(text){
 // 下面邏輯考慮是否要從資料庫 render 資料進去
 // 1. if info = "NoData" , 表示資料庫沒有資料
 // 2. else , 表示資料庫有現成資料
-function wellcomeMessageContent(info,addNewSet = false){
+function wellcomeMessageContent(info,addNewSet = false,payload = false){
   let html = `<form id="wellcomeMessageForm " class=" form-group delForm moreSettingDiv" eventType="attachment" divId="new">`
   if(addNewSet){
     html += `<button type="button" class="btn btn-sm btn-danger deleteButton">Delete</button>`
@@ -466,7 +535,9 @@ function wellcomeMessageContent(info,addNewSet = false){
     html += `<button type="button" class="btn btn-sm btn-success downButton">Down</button>`
   }
   html += `<label>Button Template (下列 Button 選項需為 1~3 組)</label>`
-  if(addNewSet){
+  if(addNewSet && payload){
+    html += `<input type="text" class="form-control payload" handleType="postback" placeholder="message event" rows="1" value="${payload}" readonly>`
+  } else if (addNewSet && !payload){
     html += `<input type="text" class="form-control payload" handleType="postback" placeholder="message event" rows="1" readonly>`
   }
   html += `<textarea class="form-control text" placeholder="Text" rows="1" readonly>`
@@ -477,7 +548,6 @@ function wellcomeMessageContent(info,addNewSet = false){
   
   // 判斷 button 組數, 並且 render 進去
   for (let i=0; i< app.buttonTemplate.numberOfSet; i++){
-    // console.log('12323', info.attachment.payload.buttons[i].type)
     html += `<div class="form-row">`
     html += `<div class="col-3"><input type="text" class="form-control text" placeholder="Button Name" `
     if(info !== 'NoData'){
@@ -486,7 +556,6 @@ function wellcomeMessageContent(info,addNewSet = false){
     html += `readonly ></div>`
     
     if(info === 'NoData'){
-      console.log('111',i)
       html += `<div class="col-3"><input type="text" class="form-control payload" placeholder="PostBack Name" readonly ></div>`
     } else if (info !== 'NoData' && info.attachment.payload.buttons[i].type === "postback"){
       // button 為 postback 類型
@@ -521,7 +590,7 @@ function wellcomeMessageContent(info,addNewSet = false){
   }
   if(info === 'NoData' && addNewSet === false){
     html += `<button type="submit" id="wellcomeMessageSubmitButton" class="btn btn-primary mb-2">Submit</button>`
-  } else if (info !== 'NoData'){
+  } else if (info !== 'NoData' && addNewSet === false){
     html += `<button type="submit" id="wellcomeMessageEditButton" class="btn btn-primary mb-2 ">Edit</button>`
   }
   html += `</form>`
@@ -551,7 +620,7 @@ function addSets(){
 }
 
 // 文字範本
-function textResponse (){
+function textResponse (content,addNewSet = false){
   let html;
   // 在 lib.js naming #index
   html = `<form class="moreSettingDiv delForm" eventType="message" divId="new">`
@@ -560,9 +629,19 @@ function textResponse (){
   html += `<button type="button" class="btn btn-sm btn-success upButton">Up</button>`
   html += `<button type="button" class="btn btn-sm btn-success downButton">Down</button>`
   html += `<label for="textResponse">Text Response</label>`
-  html += `<input type="text" class="form-control payload" handleType="message" placeholder="message event">`
+  if(addNewSet){
+    const messageEvent = content.payload
+    html += `<input type="text" class="form-control payload" handleType="message" placeholder="message event" value="${messageEvent}">`
+  } else {
+    html += `<input type="text" class="form-control payload" handleType="message" placeholder="message event">`
+  }
   html += `<small class="form-text text-muted"></small>`
-  html += `<input type="text" class="form-control text" placeholder="輸入傳出去的文字">`
+  if(addNewSet){
+    const message = JSON.parse(content.info).text
+    html += `<input type="text" class="form-control text" placeholder="輸入傳出去的文字" value="${message}">`
+  } else {
+    html += `<input type="text" class="form-control text" placeholder="輸入傳出去的文字">`
+  }
   html += `<small class="form-text text-muted"></small>`
   // html += `<button type="button" class="btn btn-primary EditButton">Edit</button>`
   // html += `<button type="button" class="btn btn-primary SubmitButton">Submit</button>`
