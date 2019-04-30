@@ -612,25 +612,26 @@ app.get(`/api/${cst.API_VERSION}/webhook/moreSetting/:pageId`, async(req, res) =
 app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
   const response = req.body;
   // 先區分資料的來源
-  console.log('response pageId', response.data);
+
   try{
   // 整理要寫入 db 的資料
   let inputContent = await insertContent(response.data);
-  console.log('123213',inputContent)
+  // console.log('inputContent',inputContent)
   let result = await moreSettingUpdated(req.body.data[0].pageId, inputContent)
   console.log('result',result);
   res.send()
   } catch(error){
-    console.log('err',error)
+    // console.log('err',error)
   }
 
   // 整理前端送進來的資料 - moreSetting
   function insertContent(input){
-
+    // console.log('input',input[0].message.buttons)
     const insertContent = [];
     return new Promise((resolve) => {
       input.forEach(e => {
         const arr= [e.pageId,e.position,e.handleType,e.event,e.payload,e.source];
+        // console.log('e', e)
         // obj.pageId= e.pageId;
         // obj.position= e.position;
         // obj.handleType = e.handleType;
@@ -661,6 +662,7 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
                 }
             }
           })
+          // console.log('In forEach', info)
           arr.push(info);
         }
         insertContent.push(arr);
@@ -729,6 +731,8 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
 
 // Creates the endpoint for our webhook 
 app.post('/webhook', async (req, res) => {
+  console.log('message',req.body.entry);
+
   // Parse the request body from the POST
   let body = req.body;
   let pageId = req.body.entry[0].id
@@ -746,6 +750,7 @@ app.post('/webhook', async (req, res) => {
 
       // Gets the body of the webhook event
       let webhook_event = entry.messaging[0];
+      console.log('webhook_event', webhook_event)
     
       // Get the sender PSID
       let sender_psid = webhook_event.sender.id;
@@ -755,15 +760,14 @@ app.post('/webhook', async (req, res) => {
       // pass the event to the appropriate handler function
       let response;
       if (webhook_event.message) {
-        // console.log('1231111', webhook_event.message)
         response = await handleMessage(pageId, webhook_event.message);       
         // callSendAPI(sender_psid, response, pageAccessToken)
- 
+        callSendAPI(sender_psid, response, pageAccessToken)
       } else if (webhook_event.postback) {
         // response 包裝成 array , 要考慮可能一次回超過一句 
         response = await handlePostback(pageId, webhook_event.postback);
+        callSendAPI(sender_psid, response, pageAccessToken)
       }
-      callSendAPI(sender_psid, response, pageAccessToken)
     });
 
     // Return a '200 OK' response to all events
@@ -803,7 +807,7 @@ app.post('/webhook', async (req, res) => {
 // Handles messages events
 function handleMessage(pageId, received_message) {
   return new Promise((resolve, reject) => {
-  let payload = received_postback.payload;
+  let payload = received_message.text;
   console.log('payload',payload)
   // Check if the message contains text
     if (received_message.text){
@@ -817,7 +821,7 @@ function handleMessage(pageId, received_message) {
           console.log('response', response)
           return resolve(response)
         } else {
-          return resolve ({ "text": "看不懂你在幹嘛啊~~~"})
+          return resolve ([{ "text": "看不懂你在幹嘛啊~~~"}])
         }
       })
     }
@@ -937,7 +941,6 @@ function callSendAPI(sender_psid, response, accessToken) {
 // payload = 'getStarted'
 function fbMessengerPlatformGetStarted(accessToken) {
   return new Promise((resolve, reject) => {
-    // let accessToken = 'EAALux5Ptc6QBADQfic0MZCiRI3OiwZAHQF0nzHeZC3d8KUaV39UeocoIxt9K54wATrD03zqG2yNMLiimk3BeE5t3RtnZCp9J06LBFSL48KlPPzX5eHTRAqReP373x8GHPPpz6UR3ZApb2R5zfEHzYI5WSOvQ551SaFdJlBmjpCx3IqDQhoWbU'
     axios('https://graph.facebook.com/v3.2/me/messenger_profile', {
       method: 'post',
       headers: { Authorization: `Bearer ${accessToken}` },

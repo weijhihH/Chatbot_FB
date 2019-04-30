@@ -21,19 +21,22 @@ fetch('/api/'+app.cst.apiVersion+'/profile',{
   if(app.profile.length > 0){
     for(i; i< app.profile.length; i++){
       content += pagesConten(app.profile[i],i,content)
-    }
-    if(i = app.profile.length-1){
-      console.log('999',content)
-      return content;
+      if(i === app.profile.length-1){
+        return content;
+      }
     }
   } else{
     // 沒有 page 資訊
+    console.log('no page information')
+    alert('查無任何 page 資訊, 請確認是否有 facebook 粉絲專頁, 即將導回首頁');
+    window.location = '/';
   }
 })
 .then((content)=>{
   jqueryDom(content);
 })
 .catch((err) =>{
+  console.log('err', err)
   alert('查無任何 page 資訊, 請確認是否有 facebook 粉絲專頁, 即將導回首頁');
   window.location = '/';
   
@@ -43,6 +46,8 @@ fetch('/api/'+app.cst.apiVersion+'/profile',{
 
 // profile content 
 function pagesConten(profile,i){
+  console.log('profile',profile)
+  console.log('pagesContent i ', i)
   let html;
   html = `<div class="card" style="width: 18rem;">`
   html +=`<div class="card-body">`
