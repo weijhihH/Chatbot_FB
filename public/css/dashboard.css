@@ -60,3 +60,7 @@ div#mainContent{
 .btn{
   margin-right: 3px;
 }
+
+#broadCast{
+  display: none;
+}

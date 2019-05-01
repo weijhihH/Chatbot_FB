@@ -25,48 +25,24 @@
         </ul>
       </nav>
         <div class="div-1 col-1.5 login list-group " id="myList" role="tablist">
-            <a class="list-group-item list-group-item-action active" data-toggle="list" href="#home" role="tab">Message</a>
+            <a class="list-group-item list-group-item-action active messageList" data-toggle="list" href="#message" role="tab">Message</a>
+            <a class="list-group-item list-group-item-action broadcastList" data-toggle="list" href="#broadcast" role="tab">Broadcast</a>
         </div>
 
-        <div class="div-2 col-3 login list-group" id="myList" role="tablist">
+        <div class="div-2 col-3 login list-group" id="message" role="tablist">
             <a class="list-group-item list-group-item-action navWellcomeMessageGreeting" data-toggle="list" href="#" role="tab">Wellcome Screen - Get Start</a>
             <a class="list-group-item list-group-item-action navWellcomeMessage" data-toggle="list" href="#" role="tab">Wellcome Message</a>
             <a class="list-group-item list-group-item-action navMoreSetting" data-toggle="list" href="#" role="tab">更多設定</a>
         </div>
 
+        <div class="div-2 col-3 login list-group" id="broadCast" role="tablist">
+          <a class="list-group-item list-group-item-action navBroadcastSetting" data-toggle="list" href="#" role="tab">Message Setting</a>
+          <a class="list-group-item list-group-item-action navBroadcastSetting" data-toggle="list" href="#" role="tab">Time Setting</a>
+        </div>
+
         <div id= "mainContent">
         </div>
-        <div id= "mainContentMoreSetting">
-          <!--
-          <form id='moreSettingDiv' index="0">
-              <div class="form-group">
-                <label for="textResponse">Text Response</label>
-                <input type="text" class="form-control" placeholder="接收到的 postback event name">
-                <small class="form-text text-muted"></small>
-                <input type="text" class="form-control" placeholder="接收到的 postback event name">
-                <small class="form-text text-muted"></small>
-              </div>
-              <button type="button" class="btn btn-primary EditButton">Edit</button>
-              <button type="button" class="btn btn-primary SubmitButton">Submit</button>
-              <button type="button" class="btn btn-danger deleteButton">Delete</button>
-              <button type="button" class="btn btn-success upButton">Up</button>
-              <button type="button" class="btn btn-success downButton">Down</button>
-          </form>
-          <form id='moreSettingDiv' index="1">
-              <div class="form-group">
-                <label for="textResponse">Text Response</label>
-                <input type="text" class="form-control" placeholder="接收到的 postback event name">
-                <small class="form-text text-muted">輸入事件名稱 ('輸入 GetStarted'，可擴充 WellcomeMessage)</small>
-                <input type="text" class="form-control" placeholder="接收到的 postback event name">
-                <small class="form-text text-muted">輸入事件名稱 ('輸入 GetStarted'，可擴充 WellcomeMessage)</small>
-              </div>
-              <button type="button" class="btn btn-primary EditButton">Edit</button>
-              <button type="button" class="btn btn-primary SubmitButton">Submit</button>
-              <button type="button" class="btn btn-danger deleteButton">Delete</button>
-              <button type="button" class="btn btn-success upButton">Up</button>
-              <button type="button" class="btn btn-success downButton">Down</button>
-          </form> 
-          -->
+        <div id= "mainContentBroadCast">
         </div>
       </div>
     </body>

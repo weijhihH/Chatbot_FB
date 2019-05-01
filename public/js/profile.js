@@ -15,6 +15,10 @@ fetch('/api/'+app.cst.apiVersion+'/profile',{
 })
 .then(res => res.json())
 .then((res) =>{
+  console.log('12313',res)
+  if(res.error){
+    return rejects(res.error)
+  }
   app.profile = res.data;
   let content =''
   let i=0
@@ -37,7 +41,7 @@ fetch('/api/'+app.cst.apiVersion+'/profile',{
 })
 .catch((err) =>{
   console.log('err', err)
-  alert('查無任何 page 資訊, 請確認是否有 facebook 粉絲專頁, 即將導回首頁');
+  alert(`${err}, 即將導回首頁`);
   window.location = '/';
   
 })

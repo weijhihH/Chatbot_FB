@@ -14,6 +14,31 @@ $(document).ready(callback);
 function callback(){
   app.init();
   $(function(){
+    // click Message
+    $('.messageList').on('click', function () {
+      switchList('message')
+    })
+
+    // click Broadcast 
+    $('.broadcastList').on('click', function () {
+      switchList('broadcast')
+    })
+
+    function switchList(content){
+      if(content === 'message'){
+        $('#broadCast').toggle();
+        $('#message').toggle();
+        $('#mainContentBroadCast').toggle();
+        $('#mainContent').toggle();
+      } else if (content === 'broadcast'){
+        $('#broadCast').show();
+        $('#message').hide();
+        $('#mainContentBroadCast').show();
+        $('#mainContent').hide();
+      }
+    }
+
+
     // 處理 Wellcome sreen button 
     // 呼叫 api and render to html;
     $('.navWellcomeMessageGreeting').on('click',function(){

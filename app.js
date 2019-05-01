@@ -47,7 +47,11 @@ function findPagesList(accessToken) {
   return new Promise((resolve, reject) => {
     axios.get('https://graph.facebook.com/me/accounts', { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((res) => {
-        // console.log('666', res.data);
+        console.log('777',res.data.data.length)
+        if(res.data.data.length === 0){
+          return reject({error: `can't get page list`})
+        }
+        console.log('666', res.data);
         resolve(res);
       })
       .catch((error) => {
@@ -72,7 +76,7 @@ function pageSubscribed(data) {
           subscribed_fields: 'messages, messaging_postbacks, message_reads, messaging_checkout_updates',
         },
       }).then((res) => {
-
+        console.log('res',res)
         // if(res.data === 'successed') {
         //   db.getConnection((err, connection) => {
         //     if (err) throw err;
@@ -277,9 +281,10 @@ app.get(`/api/${cst.API_VERSION}/profile`, async (req, res) => {
     // longLivedToken
     // console.log('123',longLivedToken)
     const result = await pageSubscribed(pageLists);
-    // console.log('777: ',result);
+    console.log('777: ',result);
     res.send({ data: pageLists });
   } catch (error) {
+    console.log(error);
     res.send({ error: error.error });
   }
 });
@@ -306,10 +311,10 @@ function getLongLivedToken(pageListsArray) {
           fb_exchange_token: arr.access_token,
         },
       }).then((res) => {
-        // console.log('res data for getLongLivedToken', res.data);
+        console.log('res data for getLongLivedToken', res.data);
         return (res.data);
       }).catch((error) => {
-        // console.log('error for getLongLivedToken', error);
+        console.log('error for getLongLivedToken', error);
         reject(error);
       }));
     });
@@ -729,6 +734,96 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
 })
 
 
+async function insetProfileToDb(psid,pageAccessToken,pageId,lastSeenTime) {
+  try{
+    // 1.找資料庫有無相符合的資料 PSID
+    const queryResult = await selectPSIDFromDb(psid)
+    if(queryResult.length > 0 ){
+      // 2-a. 有找到資料, 將 lastSeen 資料更新到資料庫中
+      const updateToDbResult = await updatelastSeenToDb(lastSeenTime, psid)
+      return updateToDbResult
+    } else {
+      // 2-b. 無找到資料, 跟 fb 要個人資料, 並且存入到資料庫中
+      const getProfile = await getProfileFromFb(psid,pageAccessToken)
+      const inserNewProfileDataToDb = await insertNewProfileToDb(getProfile, pageId,lastSeenTime)
+      return inserNewProfileDataToDb
+    }
+  } catch(error){
+    return error
+  }
+}
+
+// 將資料存入資料庫
+function insertNewProfileToDb(getProfile, pageId, lastSeenTime){
+  return new Promise((resolve, reject) => {
+    const query = `insert into people set ?`;
+    const data = getProfile.data
+    console.log('lastSeenTime',lastSeenTime)
+    console.log('typeof lastSeenTime', lastSeenTime)
+    const content = {
+      pageId: pageId,
+      PSID: data.id,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      locale: data.locale,
+      timezone: data.timezone,
+      gender: data.gender,
+      lastSeen: lastSeenTime,
+      signedUp: lastSeenTime
+    }
+    db.query(query, content, (err, result) => {
+      if (err){
+      return reject (err)}
+      return resolve(result);
+    })
+  })
+}
+
+// 將資料update進資料庫
+function updatelastSeenToDb(lastSeenTime, psid){
+  return new Promise((resolve, reject) => {
+    const query = `update people set ? where PSID = '${psid}'`
+    const content = {
+      lastSeen : lastSeenTime
+    }
+    db.query(query, content, (err, result) => {
+      if (err) {
+        return reject(err)
+      }
+      return resolve(result)
+    })
+  })
+}
+
+// 確認資料庫有無 psid
+function selectPSIDFromDb(psid){
+  return new Promise((resolve, reject) => {
+    const query = `select * from people where PSID = '${psid}'`
+    db.query(query, (err, result) => {
+      if (err) {
+        return reject(err)
+      }
+      return resolve(result)
+    })
+  })
+}
+
+// 跟 fb 要資料 (user profile)
+function getProfileFromFb(psid,pageAccessToken){
+  return new Promise((resolve, reject) => {
+    const fields = 'first_name,last_name,profile_pic,locale,timezone,gender'
+    const url = `https://graph.facebook.com/${psid}?fields=${fields}&access_token=${pageAccessToken}`
+    axios({
+      method: 'GET',
+      url: url
+    }).then((res) => {
+      return resolve(res)
+    }).catch((err) => {
+      return reject(err)
+    })
+  })
+}
+
 // Creates the endpoint for our webhook 
 app.post('/webhook', async (req, res) => {
   console.log('message',req.body.entry);
@@ -736,10 +831,15 @@ app.post('/webhook', async (req, res) => {
   // Parse the request body from the POST
   let body = req.body;
   let pageId = req.body.entry[0].id
+  let psid = req.body.entry[0].messaging[0].sender.id
+  let lastSeenTime = parseInt(req.body.entry[0].time)
   // use pageId to get facebook accesstoken
   try {
   const pageAccessToken = await dbFindPageAccessToken(pageId)
   // console.log('abcde:', body.object);
+
+  const resultA = await insetProfileToDb(psid,pageAccessToken,pageId,lastSeenTime);
+  console.log('8888', resultA)
   
 
   // Check the webhook event is from a Page subscription
@@ -818,7 +918,7 @@ function handleMessage(pageId, received_message) {
         }
         if(result.length !==0){
           const response = result.map( e => JSON.parse(e.info))
-          console.log('response', response)
+          // console.log('response', response)
           return resolve(response)
         } else {
           return resolve ([{ "text": "看不懂你在幹嘛啊~~~"}])
@@ -851,7 +951,7 @@ function handlePostback(pageId, received_postback) {
   return new Promise((resolve, reject) => {
     // Get the payload for the postback
     let payload = received_postback.payload;
-    console.log('payload',payload)
+    // console.log('payload',payload)
     // 從資料找到對應到 payload 的資料
     let query = `select * from sendMessage where pageId = '${pageId}' and payload = '${payload}' and handleType = 'postback'`
     // Set the response based on the postback payload
@@ -861,7 +961,7 @@ function handlePostback(pageId, received_postback) {
       }
       if (result.length !== 0){
         const response = result.map( e => JSON.parse(e.info))
-        console.log('response', response)
+        // console.log('response', response)
         return resolve(response)
       } else {
         return resolve ([{ "text": "看不懂你在幹嘛啊~~~"}])
