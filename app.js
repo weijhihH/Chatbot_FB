@@ -612,6 +612,18 @@ app.get(`/api/${cst.API_VERSION}/webhook/moreSetting/:pageId`, async(req, res) =
   }
 })
 
+// 讀取 db 資料給前端 - people profile
+app.get(`/api/${cst.API_VERSION}/webhook/people/:pageId`, (req, res) => {
+  const pageId = req.query.pageId
+  const selectQuery = `select * from people where pageId = '${pageId}'`
+  console.log('pageId',pageId)
+  db.query(selectQuery, (err, result) => {
+    if(err){
+      res.send({error: 'db had error'})
+    }
+    res.send({data: result})
+  })
+})
 
 // 更多設定頁面 api
 app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
@@ -681,25 +693,19 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
   
   // 刪除資料
   function moreSettingUpdated(pageId,insertContent){
-    console.log('888', pageId)
-    console.log('999', insertContent)
     return new Promise((resolve, reject) => {
       db.getConnection((error, connection) => {
         if (error){
-          console.log('1')
           return reject(error)
         }
         connection.beginTransaction((error) => {
           if (error){
-            console.log('2')
-
             connection.release();
             return reject(error)
           }
           const delQuery = `delete from sendMessage where pageId = '${pageId}' and source = 'moreSetting'`
           connection.query(delQuery,(error) => {
             if(error){
-              console.log('3')
               connection.release();
               return connection.rollback(() => {
                 reject(error)
@@ -710,19 +716,16 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
             connection.query(insertQuery, [insertContent], (error, result) => {
               connection.release();
               if(error){
-                console.log('4',error)
                 return connection.rollback(() => {
                   reject(error)
                 })
               }
               connection.commit((error) => {
                 if(error) {
-                  console.log('5')
                   return connection.rollback(() => {
                     reject(error)
                   })
                 }
-                console.log('6', result);
                 return resolve(result);
               }) 
             })
@@ -758,13 +761,10 @@ function insertNewProfileToDb(getProfile, pageId, lastSeenTime){
   return new Promise((resolve, reject) => {
     const query = `insert into people set ?`;
     const data = getProfile.data
-    console.log('lastSeenTime',lastSeenTime)
-    console.log('typeof lastSeenTime', lastSeenTime)
     const content = {
       pageId: pageId,
       PSID: data.id,
-      firstName: data.first_name,
-      lastName: data.last_name,
+      name: data.name,
       locale: data.locale,
       timezone: data.timezone,
       gender: data.gender,
@@ -811,7 +811,7 @@ function selectPSIDFromDb(psid){
 // 跟 fb 要資料 (user profile)
 function getProfileFromFb(psid,pageAccessToken){
   return new Promise((resolve, reject) => {
-    const fields = 'first_name,last_name,profile_pic,locale,timezone,gender'
+    const fields = 'name,profile_pic,locale,timezone,gender'
     const url = `https://graph.facebook.com/${psid}?fields=${fields}&access_token=${pageAccessToken}`
     axios({
       method: 'GET',

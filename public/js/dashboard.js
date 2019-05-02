@@ -24,16 +24,40 @@ function callback(){
       switchList('broadcast')
     })
 
+    // click people button
+    $('.peopleList').on('click', function () {
+      switchList('people')
+      // 跟後台要資料, db - people 
+      fetch('/api/'+app.cst.apiVersion+'/webhook/people/getInformation?pageId='+app.fb.pageId,{
+        method:'GET',
+        headers:{
+          'Authorization': 'Bearer '+ accessToken,
+        }
+      })
+      .then(res => res.json())
+      .then((res) => {
+        // 將資料 render to table
+        console.log('res data', res.data)
+        $('#peopleTable').append(addNewPeopleRow(res.data));
+      })
+    })
+
     function switchList(content){
+      delForm ();
       if(content === 'message'){
-        $('#broadCast').toggle();
-        $('#message').toggle();
-        $('#mainContentBroadCast').toggle();
-        $('#mainContent').toggle();
+        $('#broadCast').hide();
+        $('#message').show();
+        $('#mainContentBroadCast').hide();
+        $('#mainContent').show();
       } else if (content === 'broadcast'){
         $('#broadCast').show();
         $('#message').hide();
         $('#mainContentBroadCast').show();
+        $('#mainContent').hide();
+      } else if (content === 'people'){
+        $('#broadCast').hide();
+        $('#message').hide();
+        $('#mainContentBroadCast').hide();
         $('#mainContent').hide();
       }
     }
@@ -118,6 +142,14 @@ function callback(){
         // console.log('err',err);
       })
     });
+
+    // 按下 broadcast 內的 message setting button
+    $('.navBroadcastSetting').on('click', function () {
+      console.log('.navBroadcastSetting')
+      delForm();
+      $('#mainContentBroadCast').append(addSets());
+      
+    })
 
     // render the data to html after click the "更多設定" button.
     $('.navMoreSetting').on('click', function () {
@@ -388,7 +420,8 @@ function callback(){
       const parentDiv = $(this).closest('.moreSettingDiv')
       // 找出所有父層, 並且看 button 位置是第幾個
       const divIndex = $(this).parents('.moreSettingDiv').index()
-      if(divIndex > 0){
+      console.log('divIndex',divIndex)
+      if(divIndex > 1){
         // 交換位置
         parentDiv.prev().insertAfter(parentDiv)  
       }
@@ -404,7 +437,7 @@ function callback(){
       const divLength = $('.moreSettingDiv').length;
 
       // 判斷邏輯, div 位置 跟 div數量判斷
-      if(divIndex < divLength-1 ){
+      if(divIndex < divLength){
         // 交換位置
         parentDiv.next().insertBefore(parentDiv) 
       }
@@ -676,7 +709,59 @@ function textResponse (content,addNewSet = false){
   return html;
 }
 
+// 處理資料庫資料 - render to html table
+function addNewPeopleRow (data){
+  // const paging = Math.ceil(data.length / 15);
+  let lastSeenConvertToDate;
+  let signedUpConvertToDate;
+  let html = `<table class="table table-hover delForm">`
+  html += `
+    <thead>
+      <tr>
+        <th scope="col">PSID</th>
+        <th scope="col">Name</th>
+        <th scope="col">Locale</th>
+        <th scope="col">gender</th>
+        <th scope="col">lastSeen</th>
+        <th scope="col">SignedUp</th>
+      </tr>
+      </thead>
+    `
+  data.forEach(e => {
+    console.log('e',e)
+    console.log('1',parseInt(e.lastSeen))
+    console.log('2',parseInt(e.signedUp))
+    lastSeenConvertToDate = app.formatDate(parseInt(e.lastSeen))
+    signedUpConvertToDate = app.formatDate(parseInt(e.signedUp))
+    html +=`
+      <tbody>
+        <tr>
+          <td>${e.PSID}</td>
+          <td>${e.name}</td>
+          <td>${e.locale}</td>
+          <td>${e.gender}</td>
+          <td>${lastSeenConvertToDate}</td>
+          <td>${signedUpConvertToDate}</td>
+        </tr>
+      </tbody>
+    `
+  });
+  html += `</table>`
+  // 下面 paging 還沒做功能
+  html += `
+    <nav aria-label="Page navigation" class="delForm">
+      <ul class="pagination">
+        <li class="page-item"><a class="page-link" href="#">Previous</a></li>
+        <li class="page-item"><a class="page-link" href="#">1</a></li>
+        <li class="page-item"><a class="page-link" href="#">2</a></li>
+        <li class="page-item"><a class="page-link" href="#">3</a></li>
+        <li class="page-item"><a class="page-link" href="#">Next</a></li>
+      </ul>
+    </nav>
+  `
 
+  return html;
+}
 
 // 用來控制刪掉其他表單,再切換不同頁面的時候 
 function delForm (){
