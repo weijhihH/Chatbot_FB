@@ -520,7 +520,6 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
     source: response.source,
     info: JSON.stringify(info)
   }
-  console.log('12312312', queryInput);
   try {
     const selectInput = `select * from sendMessage where pageId = '${queryInput.pageId}' and payload = '${queryInput.payload}'`
     let queryResultForPageId = await querySelectResultsFromSendMessage(selectInput)
@@ -690,8 +689,6 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
 
   
 
-  
-  // 刪除資料
   function moreSettingUpdated(pageId,insertContent){
     return new Promise((resolve, reject) => {
       db.getConnection((error, connection) => {
@@ -784,7 +781,8 @@ function updatelastSeenToDb(lastSeenTime, psid){
   return new Promise((resolve, reject) => {
     const query = `update people set ? where PSID = '${psid}'`
     const content = {
-      lastSeen : lastSeenTime
+      lastSeen : lastSeenTime,
+      times: 1
     }
     db.query(query, content, (err, result) => {
       if (err) {
@@ -838,8 +836,8 @@ app.post('/webhook', async (req, res) => {
   const pageAccessToken = await dbFindPageAccessToken(pageId)
   // console.log('abcde:', body.object);
 
-  const resultA = await insetProfileToDb(psid,pageAccessToken,pageId,lastSeenTime);
-  console.log('8888', resultA)
+  const insetProfileToDbResult = await insetProfileToDb(psid,pageAccessToken,pageId,lastSeenTime);
+  console.log('8888', insetProfileToDbResult)
   
 
   // Check the webhook event is from a Page subscription

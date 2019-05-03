@@ -17,6 +17,9 @@ let app={
   },
   moreSetting:{
     SubmitButtonStatus:null
+  },
+  broadcast:{
+    numberOfSet:null
   }
 }
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 let accessToken = app.getCookie('Authorization');
 
 
@@ -14,6 +15,8 @@ $(document).ready(callback);
 function callback(){
   app.init();
   $(function(){
+
+
     // click Message
     $('.messageList').on('click', function () {
       switchList('message')
@@ -37,27 +40,27 @@ function callback(){
       .then(res => res.json())
       .then((res) => {
         // 將資料 render to table
-        console.log('res data', res.data)
+        // console.log('res data', res.data)
         $('#peopleTable').append(addNewPeopleRow(res.data));
       })
     })
 
     function switchList(content){
-      delForm ();
+      delForm();
       if(content === 'message'){
         $('#broadCast').hide();
         $('#message').show();
-        $('#mainContentBroadCast').hide();
+        $('#mainContentBroadcast').hide();
         $('#mainContent').show();
       } else if (content === 'broadcast'){
         $('#broadCast').show();
         $('#message').hide();
-        $('#mainContentBroadCast').show();
+        $('#mainContentBroadcast').show();
         $('#mainContent').hide();
       } else if (content === 'people'){
         $('#broadCast').hide();
         $('#message').hide();
-        $('#mainContentBroadCast').hide();
+        $('#mainContentBroadcast').hide();
         $('#mainContent').hide();
       }
     }
@@ -145,10 +148,43 @@ function callback(){
 
     // 按下 broadcast 內的 message setting button
     $('.navBroadcastSetting').on('click', function () {
-      console.log('.navBroadcastSetting')
+      // console.log('.navBroadcastSetting')
       delForm();
-      $('#mainContentBroadCast').append(addSets());
-      
+      $('#mainContentBroadcast').append(addSets());
+      fetch(`/api/${app.cst.apiVersion}/webhook/broadcast/getInformation?pageId=${app.fb.pageId}`,{
+        method:'GET',
+        headers:{
+          'Authorization': 'Bearer '+ accessToken,
+        }
+      })
+      .then(res => res.json())
+      .then(res => {
+        // data was not found in db
+        if (res. data === 'NoData'){
+          // console.log('data not found in db.')
+        }  else{
+          // console.log(res.data);
+          // 資料庫有資料, 判斷資料型態 (attachment or message)
+          res.data.forEach(e => {
+            // console.log('element', e);
+            if(e.event === 'attachment'){
+              // console.log('attachment')
+              const payload = e.payload
+              const info = JSON.parse(e.info)
+              app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length
+              // console.log('12313', app.buttonTemplate.numberOfSet)
+              $('#mainContent').append(wellcomeMessageContent(info,true,payload))
+            } else if (e.event === 'message'){
+              $('#mainContent').append(textResponse(e,true))
+            }
+          });
+          // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
+          $('.btn').prop('disabled', true)
+          $('.form-control').prop('readonly', true)
+          $('.custom-select').prop('disabled', true);
+          $('#editFormButton').prop('disabled', false);
+        }
+      })
     })
 
     // render the data to html after click the "更多設定" button.
@@ -165,11 +201,11 @@ function callback(){
       .then(res => res.json())
       .then(res => {
         // console.log('response',res.data)
-        // data not found in db 
+        // data was not found in db 
         if (res.data === 'NoData'){
           // console.log('data not found in db.')
         } else{
-          console.log(res.data);
+          // console.log(res.data);
           // 資料庫有資料, 判斷資料型態 (attachment or message)
           res.data.forEach(e => {
             // console.log('element', e);
@@ -195,7 +231,196 @@ function callback(){
         // console.log('err',err)
       })
     })
-    
+
+    // 
+    // 控制 mainContentBroadcast 內容內的選項
+    // 
+
+    // 按下增加 button type 按鈕, 將後台資料 render to html
+    $('#mainContentBroadcast').on('click','#addNewSetButton', function () {
+      if(!app.broadcast.numberOfSet){
+        const buttonType = $('#addNewSetSelector').val()
+        if(buttonType === 'textResponse'){
+          $('#mainContentBroadcast').append(textResponse());
+          $('#mainContentBroadcast').append(addDateTimePicker());
+          $('#mainContentBroadcast').append(addRepeatSlector());
+          app.broadcast.numberOfSet += 1;
+        } else if (buttonType === 'buttonTemplate'){
+          app.broadcast.numberOfSet += 1;
+          $('#mainContentBroadcast').append(wellcomeMessageContent('NoData', true));
+          $('#mainContentBroadcast').append(addDateTimePicker());
+          $('#mainContentBroadcast').append(addRepeatSlector());
+          $('.form-control').prop('readonly', false);
+
+        } else {
+          alert('請選擇一種類型')
+        }
+      } else {
+        alert('組數已達上限,請先將現有設定刪除後才能新增')
+      }
+      $('.upButton').hide();
+      $('.downButton').hide();
+
+      // 處理日期選取
+      $('#datetimepicker4').datetimepicker({
+        format: 'L',
+      });
+      // 處理時間選取
+      $('#datetimepicker3').datetimepicker({
+        format: 'LT',
+        stepping: 30, // 單位是半個小時
+      });
+
+    })
+
+    // 將資料送出到後台 (broadcast setting)
+    $('#mainContentBroadcast').on('click','button#submitFormButton', function () {
+      event.preventDefault();
+      console.log('test mainContentBroadcast')
+      // 整理資料
+      let data = [];
+      $('.moreSettingDiv').each(function(index){
+        // event : message or attachment
+        let event = $(this).attr('eventType')
+        // handleType = message or postback (定義是針對 message or postback event 回覆)
+        let handleType = $('input.form-control.payload').attr('handleType')
+        // 考慮不同情況整理資料
+        // 當輸入訊息是 message 的時候 ; 非 postback event , 且是一般訊息回覆
+        let payload = $(this).find('.payload').val()
+        let text = $(this).find('.text').val()
+        let source = "broadcast"
+        let pageId = app.fb.pageId
+
+        // 處理排程時間設定
+        // 選 repeate date
+        let repeatDate = [];
+        $.each($("input[name='repeatDate']:checked"), function () {
+          repeatDate.push($(this).val())
+        })
+        // 選 開始日期跟時間
+        // 時間由 AMPM 轉為 24-hours
+        const date = $(".dateInput")[0].value
+        let time = $(".timeInput")[0].value
+        let hours = Number(time.match(/^(\d+)/)[1]);
+        let minutes = Number(time.match(/:(\d+)/)[1]);
+        let AMPM = time.match(/\s(.*)$/)[1];
+        if(AMPM == "PM" && hours<12) hours = hours+12;
+        if(AMPM == "AM" && hours==12) hours = hours-12;
+        let sHours = hours.toString();
+        let sMinutes = minutes.toString();
+        if(hours<10) sHours = "0" + sHours;
+        if(minutes<10) sMinutes = "0" + sMinutes;
+        const twentyFourHoursTime = sHours+ ":"+sMinutes;
+        // 選 timezone
+        const timezone = $("select#timezone option:selected").val()
+
+        if( event === 'message'){
+          data.push({
+            "source": source,
+            "pageId": pageId,
+            "position": index,
+            "event": event, // event : message or attachment
+            "payload": payload,
+            "handleType": handleType,
+            "message": {
+                "text": text
+              },
+            "repeateDate": repeatDate,
+            "date": date,
+            "time": twentyFourHoursTime,
+            "timezone": timezone
+          })
+        } else if(event === 'attachment') {
+          // console.log(`blockType === 'buttonTemplate'`)
+          // 處理 button template 中的 button 資料
+          const textArr = [];
+          const payloadArr = [];
+          const payloadType = [];
+          
+          $(this).find(":selected").each(function(){
+            payloadType.push($(this).val())
+          })
+          $(this).find("input.form-control.button.text").each(function(){
+            textArr.push($(this).val())
+          })
+          $(this).find("input.form-control.button.payload").each(function(){
+            payloadArr.push($(this).val())
+          })
+          const buttons = [];
+          for (let i =0; i< textArr.length ; i++){
+            const obj = {};        
+            obj.type = payloadType[i];
+            obj.title = textArr[i];
+            if(obj.type === 'web_url'){
+              obj.url = payloadArr[i];
+            } else if (obj.type === 'postback'){
+              obj.payload = payloadArr[i]
+            }
+            buttons.push(obj);
+          }
+
+          data.push({
+            "source": source,
+            "pageId": pageId,
+            "position": index,
+            "event": event, // event : message or attachment
+            "payload": payload,
+            "handleType": handleType,
+            "message":
+              {
+                "template_type": "button",
+                "text": text,
+                "buttons": buttons,
+              },
+            "repeateDate": repeatDate,
+            "date": date,
+            "time": twentyFourHoursTime,
+            "timezone": timezone
+          })
+        }
+      })
+      
+      console.log('data output', data);
+
+    }) // end 將資料送出到後台 (broadcast setting)
+
+    // 操作 delete button - broadcast setting
+    $('#mainContentBroadcast').on('click','.deleteButton', function () {
+      $('.moreSettingDiv').each(function(){
+        $(this).remove();
+      })
+      app.broadcast.numberOfSet = null;
+    })
+
+    // add button template in broadcast setting page
+    $('#mainContentBroadcast').on("click","#addButtonTemplate", function () {
+      let numberOfElements = $(this).parents('.moreSettingDiv').children('.form-row').length
+      if(numberOfElements < 3) {
+        let html = `<div class="form-row ">`
+        html += `<div class="col-3"><input type="text" class="form-control button text" placeholder="Button Name"></div>`
+        html += `<div class="col-3"><input type="text" class="form-control button payload" placeholder="PostBack Name"></div>`
+
+        html += `<div class="col-1.5">`
+        html += `<select class="payload-type custom-select mr-sm-2" id="inlineFormCustomSelect" >`
+        html += `<option selected>按鈕類型</option>`
+        html += `<option value="postback">回傳按鈕</option>`
+        html += `<option value="web_url">url</option>`
+        html += `</select></div>`
+
+        html += `<div class="col-1.5"><button type="button" id="addButtonTemplate" class="addButtonTemplate btn btn-primary btn-sm ">Add</button></div>`
+        html += `<div class="col-1"><button type="button" id="deleteButtonTemplate" class="btn-danger deleteButtonTemplate btn btn-primary btn-sm ">Delete</button></div>`
+        html += `</div>`
+        $(this).closest('.form-row').after(html);
+      }
+    })
+    // delete button template in broadcast setting page
+    $('#mainContentBroadcast').on("click","#deleteButtonTemplate", function () {
+      let numberOfElements = $(this).parents('.moreSettingDiv').children('.form-row').length
+      if(numberOfElements > 1) {
+        $(this).closest('.form-row').remove(); 
+      }
+    })
+
     // 控制 Wellcome Message 內的 Add and Delete Button
     $('#mainContent').on("click","#addButtonTemplate", function () {
       let numberOfElements = $(this).parents('.moreSettingDiv').children('.form-row').length
@@ -278,11 +503,9 @@ function callback(){
         $('#wellcomeScreenTextArea').prop('readonly', true);
         $('#wellcomeScreenEditButton').prop('disabled', false);
         alert('儲存成功........')
-        // console.log('fetch result:', res)
       })
       .catch((err) => { 
         alert('儲存失敗........')
-        // console.log('fetch error: ', err)
       })
     })
 
@@ -321,13 +544,13 @@ function callback(){
       // 
       // 處理 ajax input datas
       // 
-      $('.payload-type').each(function(i){
+      $('.payload-type').each(function(){
         payloadType.push($(this).find(":selected").val())
       })
-      $('input.form-control.text').each(function(i){
+      $('input.form-control.text').each(function(){
         textArr.push($(this).val())
       })
-      $('input.form-control.payload').each(function(i){
+      $('input.form-control.payload').each(function(){
         payloadArr.push($(this).val())
       })
       event.preventDefault();
@@ -420,7 +643,7 @@ function callback(){
       const parentDiv = $(this).closest('.moreSettingDiv')
       // 找出所有父層, 並且看 button 位置是第幾個
       const divIndex = $(this).parents('.moreSettingDiv').index()
-      console.log('divIndex',divIndex)
+      // console.log('divIndex',divIndex)
       if(divIndex > 1){
         // 交換位置
         parentDiv.prev().insertAfter(parentDiv)  
@@ -446,7 +669,7 @@ function callback(){
     // 操作 delete dutton - more setting 
     $('#mainContent').on('click','.deleteButton', function () {
       $(this).closest('.moreSettingDiv').remove();
-      let a = $(this).parent().index('.moreSettingDiv')
+      // let a = $(this).parent().index('.moreSettingDiv')
     })
 
     // 操作 submit button - more setting 
@@ -486,18 +709,13 @@ function callback(){
           const payloadArr = [];
           const payloadType = [];
           
-          // console.log('11111',$(this).find(":selected"))
-          // console.log('22222',$(this).find('input.form-control.button.text').val())
-          // console.log('33333',$(this).find('input.form-control.button.payload').val())
-
-
-          $(this).find(":selected").each(function(i){
+          $(this).find(":selected").each(function(){
             payloadType.push($(this).val())
           })
-          $(this).find("input.form-control.button.text").each(function(i){
+          $(this).find("input.form-control.button.text").each(function(){
             textArr.push($(this).val())
           })
-          $(this).find("input.form-control.button.payload").each(function(i){
+          $(this).find("input.form-control.button.payload").each(function(){
             payloadArr.push($(this).val())
           })
 
@@ -533,7 +751,7 @@ function callback(){
 
 
       })
-      console.log('data output', data);
+      // console.log('data output', data);
       
       // 2. 整理輸入資料格式
       fetch('/api/'+app.cst.apiVersion+'/webhook/moreSetting',{
@@ -728,9 +946,9 @@ function addNewPeopleRow (data){
       </thead>
     `
   data.forEach(e => {
-    console.log('e',e)
-    console.log('1',parseInt(e.lastSeen))
-    console.log('2',parseInt(e.signedUp))
+    // console.log('e',e)
+    // console.log('1',parseInt(e.lastSeen))
+    // console.log('2',parseInt(e.signedUp))
     lastSeenConvertToDate = app.formatDate(parseInt(e.lastSeen))
     signedUpConvertToDate = app.formatDate(parseInt(e.signedUp))
     html +=`
@@ -764,8 +982,70 @@ function addNewPeopleRow (data){
 }
 
 // 用來控制刪掉其他表單,再切換不同頁面的時候 
-function delForm (){
+function delForm(){
   $('.delForm').each(function(){
     $(this).remove();
   })
+  app.broadcast.numberOfSet=null;
+}
+
+function addDateTimePicker(){
+  let html = `
+  <div class="row delForm timerpickerSelector moreSettingDiv">
+    <label class="col-12">排程設定</label>
+    <div class="col-4 container ">
+      <div class="form-group">
+        <div class="input-group date" id="datetimepicker4" data-target-input="nearest">
+            <input type="text" class="form-control datetimepicker-input dateInput" data-target="#datetimepicker4" name="datepicker" placeholder="日期"/>
+            <div class="input-group-append" data-target="#datetimepicker4" data-toggle="datetimepicker">
+              <div class="input-group-text"><i class="fa fa-calendar"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+    <div class="col-4 container">
+      <div class="form-group">
+        <div class="input-group date" id="datetimepicker3" data-target-input="nearest">
+          <input type="text" class="form-control datetimepicker-input timeInput" data-target="#datetimepicker3" name="timepicker" placeholder="時間"/>
+          <div class="input-group-append" data-target="#datetimepicker3" data-toggle="datetimepicker">
+            <div class="input-group-text"><i class="fa fa-clock-o" ></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <select class="col-3 custom-select mr-sm-2" id="timezone">
+    <option value="userTimezone" selected>User's timezone</option>
+    <option value="botTimezone">Bot's timezone (UTC+00:00)</option>
+    </select>
+  </div>
+  `
+  return html;
+}
+
+function addRepeatSlector(){
+  // let html = `
+  //     <div class="btn-group delForm">
+  //     <select class="custom-select " id="addNewSetSelector">
+  //       <option selected>Repeat: ..</option>
+  //       <option value="none">Repeat: None</option>
+  //       <option value="everyday">Repeat: Every Day</option>
+  //       <option value="customerDefined">Repeat: Cutomer defined</option>
+  //     </select>
+  //     </div>
+  // `
+  let html = `
+  <div class="repeatSelector btn-group delbutton row moreSettingDiv" data-toggle="buttons" hide>
+  <label class="col-12">請勾選排程每週哪一天執行 (可複選) </label>
+  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="sunday"> Sunday</label>
+  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="monday"> Monday</label>
+  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="tuesday"> Tuesday</label>
+  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="wednesday"> Wednesday</label>
+  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="thursday"> Thursday</label>
+  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="friday"> Friday</label>
+  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="saturday"> Saturday</label>
+  </div>
+  `
+  return html
 }

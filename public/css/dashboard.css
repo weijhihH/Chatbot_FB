@@ -51,7 +51,8 @@ div.form-row {
   margin-bottom: 5px;
 }
 
-div#mainContent{
+div#mainContent,
+div#mainContentBroadcast{
   margin-left: 10px;
 }
 
@@ -67,4 +68,17 @@ div#mainContent{
 
 #broadCast{
   display: none;
+}
+
+.repeatSelector,
+.timerpickerSelector{
+  margin-left: 0px;
+  padding-left: 0px;
+}
+label.col-12,
+div.col-6.container,
+div.col-4.container {
+  padding-left: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
 }
