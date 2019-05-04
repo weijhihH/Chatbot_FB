@@ -624,6 +624,26 @@ app.get(`/api/${cst.API_VERSION}/webhook/people/:pageId`, (req, res) => {
   })
 })
 
+// 將 broadcast 設定資料存入資料庫中
+app.post(`/api/${cst.API_VERSION}/broadcast`, async (req, res) => {
+  const response = req.body;
+  console.log('api/broadcast', response);
+  try{
+    // 整理要寫入 db 的資料 (整理寫進 sendMessage table)
+    let inputContent = await insertContent(response.data);
+    console.log('123123123123', inputContent)
+    await moreSettingUpdated(response.data[0].pageId, inputContent)
+    await insertTobroadcastSet(response.data[0])
+    if(response.data[0].repeatDate.length !== 0){
+    await insertTobroadcastRepeat(response.data[0].pageId,response.data[0].repeatDate)
+    }
+    res.send({data: 'data has been saved'})
+  } catch(error){
+    console.log('error: ', error)
+    res.send({error: 'error in DB'})
+  }
+})
+
 // 更多設定頁面 api
 app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
   const response = req.body;
@@ -633,105 +653,234 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
   // 整理要寫入 db 的資料
   let inputContent = await insertContent(response.data);
   // console.log('inputContent',inputContent)
-  let result = await moreSettingUpdated(req.body.data[0].pageId, inputContent)
-  console.log('result',result);
+  let moreSettingUpdatedResult = await moreSettingUpdated(req.body.data[0].pageId, inputContent)
+  console.log('result',moreSettingUpdatedResult);
   res.send()
   } catch(error){
     // console.log('err',error)
   }
+})
 
-  // 整理前端送進來的資料 - moreSetting
-  function insertContent(input){
-    // console.log('input',input[0].message.buttons)
-    const insertContent = [];
-    return new Promise((resolve) => {
-      input.forEach(e => {
-        const arr= [e.pageId,e.position,e.handleType,e.event,e.payload,e.source];
-        // console.log('e', e)
-        // obj.pageId= e.pageId;
-        // obj.position= e.position;
-        // obj.handleType = e.handleType;
-        // obj.event= e.event;
-        // obj.payload= e.payload;
-        // obj.source= e.source;
-        if(e.event === 'message'){
-          // obj.info= JSON.stringify(e.message)
-          arr.push(JSON.stringify(e.message));
-        } else if (e.event === 'attachment'){
-          // obj.info= JSON.stringify({
-          //   "attachment":{
-          //     "type":"template",
-          //     "payload":{
-          //       "template_type": e.message.template_type,
-          //       "text": e.message.text,
-          //       "buttons": e.message.buttons
-          //       }
-          //   }
-          // })
-          const info = JSON.stringify({
-            "attachment":{
-              "type":"template",
-              "payload":{
-                "template_type": e.message.template_type,
-                "text": e.message.text,
-                "buttons": e.message.buttons
-                }
-            }
-          })
-          // console.log('In forEach', info)
-          arr.push(info);
-        }
-        insertContent.push(arr);
-        return resolve(insertContent);
-      })
+// 整理前端送進來的資料 - moreSetting
+function insertContent(input){
+  const insertContent = [];
+  return new Promise((resolve) => {
+    input.forEach(e => {
+      const arr= [e.pageId,e.position,e.handleType,e.event,e.payload,e.source];
+      if(e.event === 'message'){
+        arr.push(JSON.stringify(e.message));
+      } else if (e.event === 'attachment'){
+        const info = JSON.stringify({
+          "attachment":{
+            "type":"template",
+            "payload":{
+              "template_type": e.message.template_type,
+              "text": e.message.text,
+              "buttons": e.message.buttons
+              }
+          }
+        })
+        arr.push(info);
+      }
+      insertContent.push(arr);
+      return resolve(insertContent);
     })
-  }
+  })
+}
 
-  
-
-  function moreSettingUpdated(pageId,insertContent){
-    return new Promise((resolve, reject) => {
-      db.getConnection((error, connection) => {
+// 將資料存入資料庫 or update 資料
+function moreSettingUpdated(pageId,insertContent){
+  return new Promise((resolve, reject) => {
+    db.getConnection((error, connection) => {
+      if (error){
+        return reject(error)
+      }
+      connection.beginTransaction((error) => {
         if (error){
+          connection.release();
           return reject(error)
         }
-        connection.beginTransaction((error) => {
-          if (error){
+        const delQuery = `delete from sendMessage where pageId = '${pageId}' and source = 'moreSetting'`
+        connection.query(delQuery,(error) => {
+          if(error){
             connection.release();
-            return reject(error)
+            return connection.rollback(() => {
+              reject(error)
+            })
           }
-          const delQuery = `delete from sendMessage where pageId = '${pageId}' and source = 'moreSetting'`
-          connection.query(delQuery,(error) => {
+          // const insertQuery = `insert into sendMessage set ?`
+          const insertQuery = "insert into sendMessage (`pageId`,`position`,`handleType`,`event`,`payload`,`source`,`info`) values ?"
+          connection.query(insertQuery, [insertContent], (error, result) => {
+            connection.release();
             if(error){
-              connection.release();
               return connection.rollback(() => {
                 reject(error)
               })
             }
-            // const insertQuery = `insert into sendMessage set ?`
-            const insertQuery = "insert into sendMessage (`pageId`,`position`,`handleType`,`event`,`payload`,`source`,`info`) values ?"
-            connection.query(insertQuery, [insertContent], (error, result) => {
-              connection.release();
-              if(error){
+            connection.commit((error) => {
+              if(error) {
                 return connection.rollback(() => {
                   reject(error)
                 })
               }
-              connection.commit((error) => {
-                if(error) {
-                  return connection.rollback(() => {
-                    reject(error)
-                  })
-                }
-                return resolve(result);
-              }) 
-            })
+              return resolve(result);
+            }) 
           })
         })
       })
     })
-  }
-})
+  })
+}
+
+// 將 broadcast setting 存入 broadcastSet 內
+function insertTobroadcastSet(input) {
+  return new Promise((resolve, reject) => {
+    // 判斷有無要 repeat 
+    // broadcast 有週期的話, repeat = true , 反之為 false
+    let repeat;
+    if(input.repeatDate.length === 0){
+      repeat = false;
+    } else {
+      repeat = true; 
+    }
+
+    const inertQueryToBroadcastSet = `insert into broadcastSet set ?`
+    const updateQueryToBroadcastSet = `update broadcastSet set ? where pageId = '${input.pageId}'`
+    const contentForBroadcastSet = {
+      pageId: input.pageId,
+      startDate: input.date,
+      startTime: input.time,
+      timezone: input.timezone,
+      repeat: repeat
+    }
+
+    db.getConnection((err,connection) => {
+      if(err){
+        return reject(err)
+      }
+      connection.beginTransaction((err) => {
+        if(err){
+          return reject(err)
+        }
+        connection.query(`select * from broadcastSet where pageId = '${input.pageId}'`, (err, result) => {
+          if(err){
+            connection.release();
+            connection.rollback(() => {
+              return reject(err);
+            })
+          }
+          if(result.length === 0){
+            // 資料庫無資料, 新增
+            connection.query(inertQueryToBroadcastSet, contentForBroadcastSet, (err, result) => {
+              connection.release();
+              if(err){
+                connection.rollback(() => {
+                  return reject(err);
+                })
+              }
+              connection.commit((err) => {
+                if(err){
+                  connection.rollback();
+                  return reject(err);
+                }
+                return resolve(result)
+              })
+            })
+          } else {
+            // update 資料
+            connection.query(updateQueryToBroadcastSet, contentForBroadcastSet, (err, result) => {
+              connection.release();
+              if(err){
+                connection.rollback(() => {
+                  return reject(err);
+                })
+              }
+              connection.commit((err) => {
+                if(err){
+                  connection.rollback();
+                  return reject(err);
+                }
+                return resolve(result);
+              })
+            })
+          }
+        })
+      }) // transaction
+    })
+  }) 
+}
+
+// 將 broadcast repeat setting 存入 broadcastRepeat 內
+function insertTobroadcastRepeat(pageId,input){
+  return new Promise((resolve, reject) => {
+    const insertContent = [];
+    input.forEach(e => {
+      switch (e) {
+        case 'sunday':
+          insertContent.push([pageId,7])
+          break;
+        case 'monday':
+          insertContent.push([pageId,1])
+          break;
+        case 'tuesday':
+          insertContent.push([pageId,2])
+          break;
+        case 'wednesday':
+          insertContent.push([pageId,3])
+          break;
+        case 'thursday':
+          insertContent.push([pageId,4])
+          break;
+        case 'friday':
+          insertContent.push([pageId,5])
+          break;
+        case 'saturday':
+          insertContent.push([pageId,6])
+          break;        
+      }
+    });
+    console.log('insertContent',insertContent)
+    db.getConnection((err,connection) => {
+      if (err){
+        return reject(err)
+      }
+      connection.beginTransaction((err) => {
+        if(err){
+          return reject(err)
+        }
+        const delQuery = `delete from broadcastRepeat where pageId = '${pageId}' and ruleId between 1 and 7`
+        const insertQuery = "insert into broadcastRepeat (`pageId`,`ruleId`) values ?"
+
+        // 舊資料先清掉
+        connection.query(delQuery,(err, result) => {
+          if(err){
+            connection.release();
+            return connection.rollback(() => {
+              reject(err)
+            })
+          }
+          connection.query(insertQuery, [insertContent], (err, result) => {
+            connection.release();
+            if(err){
+              return connection.rollback(() => {
+                reject(err)
+              })
+            }
+            connection.commit((err) => {
+              if(err) {
+                return connection.rollback(() => {
+                  reject(err)
+                })
+              }
+              return resolve(result);
+            }) 
+          })
+        })
+      }) // end of transaction
+    }) // end of getConnection
+  })
+}
+
 
 
 async function insetProfileToDb(psid,pageAccessToken,pageId,lastSeenTime) {

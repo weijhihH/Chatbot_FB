@@ -110,7 +110,8 @@ function callback(){
         headers:{
           'Authorization': 'Bearer '+ accessToken,
         }
-      }).then(res => res.json())
+      })
+      .then(res => res.json())
       .then((res) => {
         // 移除 wellcome Screen 的內容
         delForm();
@@ -292,7 +293,7 @@ function callback(){
         let pageId = app.fb.pageId
 
         // 處理排程時間設定
-        // 選 repeate date
+        // 選 repeat date
         let repeatDate = [];
         $.each($("input[name='repeatDate']:checked"), function () {
           repeatDate.push($(this).val())
@@ -325,7 +326,7 @@ function callback(){
             "message": {
                 "text": text
               },
-            "repeateDate": repeatDate,
+            "repeatDate": repeatDate,
             "date": date,
             "time": twentyFourHoursTime,
             "timezone": timezone
@@ -372,7 +373,7 @@ function callback(){
                 "text": text,
                 "buttons": buttons,
               },
-            "repeateDate": repeatDate,
+            "repeatDate": repeatDate,
             "date": date,
             "time": twentyFourHoursTime,
             "timezone": timezone
@@ -381,6 +382,26 @@ function callback(){
       })
       
       console.log('data output', data);
+      //  2. 資料送進後台
+      fetch('/api/'+app.cst.apiVersion+'/broadcast',{
+        method: 'POST',
+        headers:{
+          'Authorization': 'Bearer '+ accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          "data": data
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        console.log('res', res)
+        alert('資料存入成功')
+      })
+      .catch(err => {
+        console.log('err', err)
+        alert('資料存入失敗')
+      })
 
     }) // end 將資料送出到後台 (broadcast setting)
 
@@ -753,7 +774,7 @@ function callback(){
       })
       // console.log('data output', data);
       
-      // 2. 整理輸入資料格式
+      // 2. 資料送進後台
       fetch('/api/'+app.cst.apiVersion+'/webhook/moreSetting',{
         method:'POST',
         headers:{
@@ -764,6 +785,7 @@ function callback(){
           "data": data
         })
       })
+      .then(res => res.json())
       .then((res) => {
         // console.log('ok',res);
         // 成功, 將送出表單按鈕隱藏起來
