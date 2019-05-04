@@ -148,11 +148,11 @@ function callback(){
     });
 
     // 按下 broadcast 內的 message setting button
-    $('.navBroadcastSetting').on('click', function () {
+    $(this).on('click', '.navBroadcastSetting', function () {
       // console.log('.navBroadcastSetting')
       delForm();
       $('#mainContentBroadcast').append(addSets());
-      fetch(`/api/${app.cst.apiVersion}/webhook/broadcast/getInformation?pageId=${app.fb.pageId}`,{
+      fetch(`/api/${app.cst.apiVersion}/broadcast/getInformation?pageId=${app.fb.pageId}`,{
         method:'GET',
         headers:{
           'Authorization': 'Bearer '+ accessToken,
@@ -160,11 +160,11 @@ function callback(){
       })
       .then(res => res.json())
       .then(res => {
+        console.log('res', res)
         // data was not found in db
-        if (res. data === 'NoData'){
-          // console.log('data not found in db.')
+        if (res.data === 'NoData'){
+          console.log('data not found in db.')
         }  else{
-          // console.log(res.data);
           // 資料庫有資料, 判斷資料型態 (attachment or message)
           res.data.forEach(e => {
             // console.log('element', e);
@@ -174,19 +174,72 @@ function callback(){
               const info = JSON.parse(e.info)
               app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length
               // console.log('12313', app.buttonTemplate.numberOfSet)
-              $('#mainContent').append(wellcomeMessageContent(info,true,payload))
+              $('#mainContentBroadcast').append(wellcomeMessageContent(info,true,payload))
             } else if (e.event === 'message'){
-              $('#mainContent').append(textResponse(e,true))
+              $('#mainContentBroadcast').append(textResponse(e,true))
             }
           });
-          // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
-          $('.btn').prop('disabled', true)
-          $('.form-control').prop('readonly', true)
-          $('.custom-select').prop('disabled', true);
-          $('#editFormButton').prop('disabled', false);
+          // 將 日期/時間 設定 render to html
+          // res.data.broadcast[0]
+          // res.data.repeatDate[0]
+          const startDate = new Date(res.broadcast[0].startDate)
+          const startTime = tConvert(res.broadcast[0].startTime)
+          const timezone = res.broadcast[0].timezone
+          const repeat = res.repeatDate
+          console.log('startTime', startTime)
+          $('#mainContentBroadcast').append(addDateTimePicker());
+          $('#mainContentBroadcast').append(addRepeatSlector());
+          // render broadcast setting (時間/日期/週期)
+          // 處理日期選取
+          $('#datetimepicker4').datetimepicker({
+            format: 'L',
+            date: startDate,
+          });
+          $('.timeInput').val(startTime);
+          // 處理時間選取
+          $('#datetimepicker3').datetimepicker({
+            format: 'LT',
+            stepping: 30, // 單位是半個小時
+          });
+          $("select#timezone").val(timezone)
+
+          $.each($("input[name='repeatDate']"), function () {
+            repeat.forEach(e => {
+              if(e === $(this).val()){
+                $(this).prop('checked',true)
+                $(this).parent().attr('class','btn btn-outline-primary btn-sm repeatSlector active')
+              }
+            });
+          })
+
+          
+
+
+
+
+
+          // // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
+          // $('.btn').prop('disabled', true)
+          // $('.form-control').prop('readonly', true)
+          // $('.custom-select').prop('disabled', true);
+          // $('#editFormButton').prop('disabled', false);
         }
+        
       })
     })
+
+    function tConvert (time) {
+      // Check correct time format and split into components
+      time = time.toString ().match (/^([01]\d|2[0-3])(:)([0-5]\d)(:[0-5]\d)?$/) || [time];
+    
+      if (time.length > 1) { // If time format correct
+        time = time.slice (1);  // Remove full string match value
+        time[5] = +time[0] < 12 ? ' AM' : ' PM'; // Set AM/PM
+        time[0] = +time[0] % 12 || 12; // Adjust hours
+      }
+      return time.join (''); // return adjusted time or original string
+    }
+    
 
     // render the data to html after click the "更多設定" button.
     $('.navMoreSetting').on('click', function () {
@@ -797,7 +850,7 @@ function callback(){
 
       })    
       .catch((err) => {
-        // console.log('error', err);
+        console.log('error', err);
         alert('資料存入失敗')
       })
     })
@@ -1058,15 +1111,15 @@ function addRepeatSlector(){
   //     </div>
   // `
   let html = `
-  <div class="repeatSelector btn-group delbutton row moreSettingDiv" data-toggle="buttons" hide>
+  <div class="repeatSelector btn-group delbutton row moreSettingDiv delForm" data-toggle="buttons" hide>
   <label class="col-12">請勾選排程每週哪一天執行 (可複選) </label>
-  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="sunday"> Sunday</label>
-  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="monday"> Monday</label>
-  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="tuesday"> Tuesday</label>
-  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="wednesday"> Wednesday</label>
-  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="thursday"> Thursday</label>
-  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="friday"> Friday</label>
-  <label class="btn btn-outline-primary btn-sm"><input type="checkbox" name="repeatDate" value="saturday"> Saturday</label>
+  <label class="btn btn-outline-primary btn-sm repeatSlector"><input type="checkbox" name="repeatDate" value="sunday"> Sunday</label>
+  <label class="btn btn-outline-primary btn-sm repeatSlector"><input type="checkbox" name="repeatDate" value="monday"> Monday</label>
+  <label class="btn btn-outline-primary btn-sm repeatSlector"><input type="checkbox" name="repeatDate" value="tuesday"> Tuesday</label>
+  <label class="btn btn-outline-primary btn-sm repeatSlector"><input type="checkbox" name="repeatDate" value="wednesday"> Wednesday</label>
+  <label class="btn btn-outline-primary btn-sm repeatSlector"><input type="checkbox" name="repeatDate" value="thursday"> Thursday</label>
+  <label class="btn btn-outline-primary btn-sm repeatSlector"><input type="checkbox" name="repeatDate" value="friday"> Friday</label>
+  <label class="btn btn-outline-primary btn-sm repeatSlector"><input type="checkbox" name="repeatDate" value="saturday"> Saturday</label>
   </div>
   `
   return html

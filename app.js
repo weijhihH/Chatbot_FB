@@ -587,7 +587,7 @@ app.get(`/api/${cst.API_VERSION}/webhook/moreSetting/:pageId`, async(req, res) =
   try {
     const pageId = req.query.pageId
     const selectQuery = `select * from sendMessage where pageId = '${pageId}' and source = 'moreSetting'`
-    const queryResult = await findDataFromDB(selectQuery);
+    const queryResult = await queryDataDromDB(selectQuery);
     console.log('queryResult', queryResult.length)
     if(queryResult.length === 0){
       res.send({data: 'NoData'})
@@ -598,18 +598,19 @@ app.get(`/api/${cst.API_VERSION}/webhook/moreSetting/:pageId`, async(req, res) =
     console.log('error', error)
     res.send({'error': 'someting error happened'})
   }
-  // 找資料
-  function findDataFromDB (query){
-    return new Promise((resolve,reject) => {
-      db.query(query, (error, result) => {
-        if (error){
-          return reject (error)
-        }
-        return resolve(result)
-      })
-    })
-  }
 })
+
+// 找資料
+function queryDataDromDB (query){
+  return new Promise((resolve,reject) => {
+    db.query(query, (error, result) => {
+      if (error){
+        return reject (error)
+      }
+      return resolve(result)
+    })
+  })
+}
 
 // 讀取 db 資料給前端 - people profile
 app.get(`/api/${cst.API_VERSION}/webhook/people/:pageId`, (req, res) => {
@@ -624,18 +625,59 @@ app.get(`/api/${cst.API_VERSION}/webhook/people/:pageId`, (req, res) => {
   })
 })
 
+app.get(`/api/${cst.API_VERSION}/broadcast/:pageId`, async(req, res) => {
+  try{
+  const pageId = req.query.pageId
+  const selectQueryInSendmessage = `select * from sendMessage where pageId = '${pageId}' and source = 'broadcast'`
+  const selectQuerybroadcastSet = `select * from broadcastSet where pageId = '${pageId}'`
+  const selectQuerybroadcastRepeat = `select rule.rule from broadcastRepeat left join rule on broadcastRepeat.ruleId = rule.ruleid where pageId ='${pageId}'`
+
+  const selectQueryInSendmessageResult = await queryDataDromDB(selectQueryInSendmessage);
+    if(selectQueryInSendmessageResult.length === 0){
+      res.send({data: 'NoData'})
+    } else {
+      const selectQuerybroadcastSetResult = await queryDataDromDB(selectQuerybroadcastSet);
+      if(selectQuerybroadcastSetResult[0].repeat === 0){
+        res.send({
+          data: selectQueryInSendmessageResult,
+          broadcast: selectQuerybroadcastSetResult,
+        })
+      } else {
+        const selectQuerybroadcastRepeatResult = await queryDataDromDB(selectQuerybroadcastRepeat)
+        const repeatDate = [];
+        selectQuerybroadcastRepeatResult.forEach(e => {
+          repeatDate.push(e.rule)
+        });
+        res.send({
+          data: selectQueryInSendmessageResult,
+          broadcast: selectQuerybroadcastSetResult,
+          repeatDate: repeatDate
+        })
+      }
+    }
+  } catch (error){
+    console.log('error',error)
+    res.send({error:'something error happened'})
+  }
+})
+
+
 // 將 broadcast 設定資料存入資料庫中
 app.post(`/api/${cst.API_VERSION}/broadcast`, async (req, res) => {
   const response = req.body;
+  const source = 'broadcast';
   console.log('api/broadcast', response);
   try{
     // 整理要寫入 db 的資料 (整理寫進 sendMessage table)
     let inputContent = await insertContent(response.data);
     console.log('123123123123', inputContent)
-    await moreSettingUpdated(response.data[0].pageId, inputContent)
+    await messageDBUpdated(response.data[0].pageId, inputContent, source)
     await insertTobroadcastSet(response.data[0])
     if(response.data[0].repeatDate.length !== 0){
-    await insertTobroadcastRepeat(response.data[0].pageId,response.data[0].repeatDate)
+      await insertTobroadcastRepeat(response.data[0].pageId,response.data[0].repeatDate)
+    } else {
+      const delQuery = `delete from broadcastRepeat where pageId ='${response.data[0].pageId}'`
+      await queryDataDromDB(delQuery)
     }
     res.send({data: 'data has been saved'})
   } catch(error){
@@ -647,15 +689,16 @@ app.post(`/api/${cst.API_VERSION}/broadcast`, async (req, res) => {
 // 更多設定頁面 api
 app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
   const response = req.body;
+  const source = 'moreSetting';
   // 先區分資料的來源
 
   try{
   // 整理要寫入 db 的資料
   let inputContent = await insertContent(response.data);
   // console.log('inputContent',inputContent)
-  let moreSettingUpdatedResult = await moreSettingUpdated(req.body.data[0].pageId, inputContent)
+  let moreSettingUpdatedResult = await messageDBUpdated(req.body.data[0].pageId, inputContent, source)
   console.log('result',moreSettingUpdatedResult);
-  res.send()
+  res.send({data: 'data has been saved'})
   } catch(error){
     // console.log('err',error)
   }
@@ -689,7 +732,7 @@ function insertContent(input){
 }
 
 // 將資料存入資料庫 or update 資料
-function moreSettingUpdated(pageId,insertContent){
+function messageDBUpdated(pageId,insertContent,source){
   return new Promise((resolve, reject) => {
     db.getConnection((error, connection) => {
       if (error){
@@ -700,7 +743,7 @@ function moreSettingUpdated(pageId,insertContent){
           connection.release();
           return reject(error)
         }
-        const delQuery = `delete from sendMessage where pageId = '${pageId}' and source = 'moreSetting'`
+        const delQuery = `delete from sendMessage where pageId = '${pageId}' and source = '${source}'`
         connection.query(delQuery,(error) => {
           if(error){
             connection.release();
@@ -731,6 +774,7 @@ function moreSettingUpdated(pageId,insertContent){
     })
   })
 }
+
 
 // 將 broadcast setting 存入 broadcastSet 內
 function insertTobroadcastSet(input) {
