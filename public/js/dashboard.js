@@ -199,7 +199,7 @@ function callback(){
           // 處理時間選取
           $('#datetimepicker3').datetimepicker({
             format: 'LT',
-            stepping: 30, // 單位是半個小時
+            stepping: 1, // 單位是半個小時
           });
           $("select#timezone").val(timezone)
 
@@ -322,7 +322,7 @@ function callback(){
       // 處理時間選取
       $('#datetimepicker3').datetimepicker({
         format: 'LT',
-        stepping: 30, // 單位是半個小時
+        stepping: 1, // 單位是半個小時
       });
 
     })

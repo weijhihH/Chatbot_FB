@@ -938,12 +938,74 @@ async function insetProfileToDb(psid,pageAccessToken,pageId,lastSeenTime) {
     } else {
       // 2-b. 無找到資料, 跟 fb 要個人資料, 並且存入到資料庫中
       const getProfile = await getProfileFromFb(psid,pageAccessToken)
-      const inserNewProfileDataToDb = await insertNewProfileToDb(getProfile, pageId,lastSeenTime)
-      return inserNewProfileDataToDb
+      await insertNewProfileToDb(getProfile, pageId,lastSeenTime)
+      // 第一次建立完資料, 順便把 pageId 綁定 label (綁定區域&性別&時區)
+      const checkLabelsResult = await checkLabels(getProfile)
+      console.log('checkLabelsResult',checkLabelsResult)
+      if(checkLabelsResult.length !== 0 ){
+        const addUserToFacebookLabelsResult = await addUserToFacebookLabels(checkLabelsResult, pageAccessToken, psid)
+        return addUserToFacebookLabelsResult
+      }
+      return 'no Update Data'
     }
   } catch(error){
     return error
   }
+}
+
+// 確認資料庫有無現成的資料 - labels
+function checkLabels(getProfile){
+  return new Promise((resolve, reject) => {
+    const data = getProfile.data
+    const query = `select * from labels where label_name = 'locale${data.locale}' or label_name = 'genderIs${data.gender}' or label_name = 'timezone${data.timezone}'`
+    db.query(query, (err, result) => {
+      if (err){
+      return reject (err)
+      }
+      return resolve(result);
+    })
+  })
+}
+// 確認使用者時區是否已經在有對應的 label_id = timezoneXXX
+// 沒有的話要新增 label, 並且將回應的 label_id 添加到現有 query reuslt
+// function(){....}
+
+
+// 確認使用者地區是否已經在有對應的 label_id = localeXXX
+// 沒有的話要新增 label, 並且將回應的 label_id 添加到現有 query reuslt
+// function(){....}
+
+// 將使用者加入標籤
+// Broadcast 群發給特定的群組用,綁標籤
+function addUserToFacebookLabels(response, accessToken, psid){
+  return new Promise((resolve, reject) => {
+    const promiseArr = [];
+    response.forEach(arr => {
+      promiseArr.push(axios({
+        method: 'POST',
+        url: `https://graph.facebook.com/v2.11/${arr.label_id}/label?access_token=${accessToken}`,
+        data: {
+            "user": psid
+          }
+        })
+        .then((res) => {
+          console.log('res.data', res.data)
+          return res.data
+        })
+        .catch((err) => {
+          console.log('err.data', err.response.data)
+          return (err.response.data)
+        })
+      )
+    });
+    Promise.all(promiseArr)
+    .then((res) => {
+      resolve(res);
+    })
+    .catch((err) => {
+      reject(err)
+    })
+  })
 }
 
 // 將資料存入資料庫
@@ -963,7 +1025,8 @@ function insertNewProfileToDb(getProfile, pageId, lastSeenTime){
     }
     db.query(query, content, (err, result) => {
       if (err){
-      return reject (err)}
+      return reject (err)
+      }
       return resolve(result);
     })
   })
