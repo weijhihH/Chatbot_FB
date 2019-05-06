@@ -327,35 +327,6 @@ function getLongLivedToken(pageListsArray) {
 
 
 
-// // Adds support for GET requests to our webhook
-// app.get('/webhook', (req, res) => {
-
-//   // Your verify token. Should be a random string.
-//   let VERIFY_TOKEN = PAGE_ACCESS_TOKEN;
-//   console.log('000000000');
-    
-//   // Parse the query params
-//   let mode = req.query['hub.mode'];
-//   let token = req.query['hub.verify_token'];
-//   let challenge = req.query['hub.challenge'];
-    
-//   // Checks if a token and mode is in the query string of the request
-//   if (mode && token) {
-  
-//     // Checks the mode and token sent is correct
-//     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-      
-//       // Responds with the challenge token from the request
-//       console.log('WEBHOOK_VERIFIED');
-//       res.status(200).send(challenge);
-    
-//     } else {
-//       // Responds with '403 Forbidden' if verify tokens do not match
-//       res.sendStatus(403);      
-//     }
-//   }
-// });
-
 // 機器人相關內容
 
 app.get(`/api/${cst.API_VERSION}/webhook/greeting/:pageId`, async (req, res) => {
@@ -393,10 +364,13 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
   try {
     // Find pageAccessToken
     const pageAccessToken = await dbFindPageAccessToken(pageId);
+    console.log('pageAccessToken',pageAccessToken)
     // SET Greeting request to FB; 
-    await fetchSetGreeting(pageAccessToken, requestBody);
+    const fetchSetGreetingResult = await fetchSetGreeting(pageAccessToken, requestBody);
+    console.log('fetchSetGreetingResult',fetchSetGreetingResult)
     // 判別資料是否已經在資料庫存在
     const checkGreetingMessageResult = await checkGreetingMessage(pageId);
+    console.log('checkGreetingMessageResult',checkGreetingMessageResult)
     // 將資料存入資料庫
     const dataIntoGreetingMessageDB = {
       pageId,
@@ -1138,24 +1112,7 @@ app.post('/webhook', async (req, res) => {
 
 });
 
-// // backup
-// // Handles messages events
-// function handleMessage(sender_psid, received_message, accessToken) {
-//   let response;
 
-//   // Check if the message contains text
-//   if (received_message.text) {    
-
-//     // // Create the payload for a basic text message
-
-//     response = {"text": "What are you up to?"}
-  
-//   } else if (received_message.attachments) {
-//     // Get the URL of the message attachment
-//     response = [{"text": "抱歉~看不懂這是什麼???"}]
-//   // Sends the response message
-//   callSendAPI(sender_psid, response, accessToken);  
-// }
 
 // backup
 // Handles messages events
@@ -1165,7 +1122,7 @@ function handleMessage(pageId, received_message) {
   console.log('payload',payload)
   // Check if the message contains text
     if (received_message.text){
-      let query = `select * from sendMessage where pageId = '${pageId}' and payload = '${payload}' and handleType = 'message'`
+      let query = `select * from sendMessage where pageId = '${pageId}' and payload = '${payload}'`
       db.query(query, (error, result) => {
         if(error) {
           return reject (error);
@@ -1175,7 +1132,20 @@ function handleMessage(pageId, received_message) {
           // console.log('response', response)
           return resolve(response)
         } else {
-          return resolve ([{ "text": "看不懂你在幹嘛啊~~~"}])
+          console.log('loop 1')
+          // 看到不懂的文字,強制回去 getStart
+          let queryGetStarted = `select * from sendMessage where pageId = '${pageId}' and payload = 'getStarted'`
+          db.query(queryGetStarted,(error, result) => {
+            if(error) {
+              console.log('error',error)
+              return reject (error);
+            }
+            const response = result.map( e => JSON.parse(e.info))
+            console.log('response',response)
+            return resolve(response)
+          })
+          // return resolve ([{ "text": "看不懂你在幹嘛啊~~~"}])
+
         }
       })
     }
@@ -1183,21 +1153,6 @@ function handleMessage(pageId, received_message) {
 }
 
 
-// Handles messaging_postbacks events
-// function handlePostback(sender_psid, received_postback, accessToken) {
-//   let response;
-//   // Get the payload for the postback
-//   let payload = received_postback.payload;
-
-//   // Set the response based on the postback payload
-//   if (payload === 'yes') {
-//     response = { "text": "Thanks!" }
-//   } else if (payload === 'no') {
-//     response = { "text": "Oops, try sending another image." }
-//   }
-//   // Send the message to acknowledge the postback
-//   callSendAPI(sender_psid, response, accessToken);
-// }
 
 
 
@@ -1207,7 +1162,7 @@ function handlePostback(pageId, received_postback) {
     let payload = received_postback.payload;
     // console.log('payload',payload)
     // 從資料找到對應到 payload 的資料
-    let query = `select * from sendMessage where pageId = '${pageId}' and payload = '${payload}' and handleType = 'postback'`
+    let query = `select * from sendMessage where pageId = '${pageId}' and payload = '${payload}'`
     // Set the response based on the postback payload
     db.query(query, (error, result) => {
       if (error) {
@@ -1218,26 +1173,24 @@ function handlePostback(pageId, received_postback) {
         // console.log('response', response)
         return resolve(response)
       } else {
-        return resolve ([{ "text": "看不懂你在幹嘛啊~~~"}])
+
+        // 看到不懂的文字,強制回去 getStart
+        let queryGetStarted = `select * from sendMessage where pageId = '${pageId}' and payload = 'getStarted'`
+        db.query(queryGetStarted,(error, result) => {
+          if(error) {
+            return reject (error);
+          }
+          const response = result.map( e => JSON.parse(e.info))
+          return resolve(response)
+        })
+        // return resolve ([{ "text": "看不懂你在幹嘛啊~~~"}])
+
+
       }
     })
   })
 }
 
-
-// 測試範例,可以刪除
-// let query = `select * from sendMessage where pageId = '413245412820200' and handleType = 'message'`
-// db.query(query, (error, result) => {
-//   if (error) {
-//     return reject (error);
-//   }
-//   if (result.length !== 0){
-//     const map1 = result.map(e => JSON.parse(e.info))
-//     console.log('99999',map1)
-//   } else {
-//     return console.log('999')
-//   }
-// })
 
 // Sends response messages via the Send API
 function callSendAPI(sender_psid, response, accessToken) {
@@ -1263,30 +1216,6 @@ function callSendAPI(sender_psid, response, accessToken) {
     .catch(err => console.log('err: ', err))
   })
 }
-
-// // backup 
-// // Sends response messages via the Send API
-// function callSendAPI(sender_psid, response, accessToken) {
-//   // Construct the message body
-//   let request_body = {
-//     "recipient": {
-//       "id": sender_psid
-//     },
-//     "message": response
-//   };
-//   console.log('999',request_body)
-//   // 回傳訊息給 page
-//   axios({
-//     method: 'post',
-//     url: 'https://graph.facebook.com/v3.2/me/messages',
-//     headers: {
-//       'Authorization' : `Bearer ${accessToken}`,
-//       'Content-Type': 'application/json'
-//     },
-//     data : request_body
-//   }).then(() => console.log('res: ', 'ok'))
-//   .catch(err => console.log('err: ', err))
-// }
 
 
 // 機器人相關內容
@@ -1315,43 +1244,10 @@ function fbMessengerPlatformGetStarted(accessToken) {
   });
 }
 
-// // 存東西測試用
-// const testContent = {
-//   pageId:413245412820200,
-//   position:0,
-//   payload:'getStarted',
-//   info: JSON.stringify({
-//     "attachment":{
-//       "type":"template",
-//       "payload":{
-//         "template_type": "button",
-//         "text": '測試一下',
-//         "buttons": [
-//           {
-//             "type":"postback",
-//             "title":"666",
-//             "payload":"777",
-//           },
-//           {
-//             "type":"postback",
-//             "title":"888",
-//             "payload":"999",
-//           }
-//         ]
-//       }
-//     }
-//   })
-// }
-// db.query(`update sendMessage set ? where pageId = '${testContent.pageId}'`,testContent,(err, result) => {
-//   if(err)
-//   throw err;
-//   console.log(result)
-// })
 
 
 app.listen('3001', () => {
   console.log('Server connected on port 3001');
 });
 
-// Mysql
 
