@@ -1,0 +1,24 @@
+{
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es6": true
+    },
+    "extends": "airbnb-base",
+    "globals": {
+        "Atomics": "readonly",
+        "SharedArrayBuffer": "readonly"
+    },
+    "parserOptions": {
+        "ecmaVersion": 2018
+    },
+    "rules": {
+        "no-use-before-define": ["error", { "functions": false, "classes": true }],
+        "no-bitwise": ["error", { "allow": ["^="] }],
+        "max-len": ["error", { "code": 150 }],
+        "no-unused-expressions": ["error", { "allowShortCircuit": true }],
+        "consistent-return": "off",
+        "no-restricted-syntax": ["error", "ForInStatement", "LabeledStatement", "WithStatement"],
+        "no-console": "off"
+    }
+}
