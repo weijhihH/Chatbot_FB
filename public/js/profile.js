@@ -1,3 +1,5 @@
+/* eslint-disable no-plusplus */
+/* eslint-disable no-undef */
 const accessToken = app.getCookie('Authorization');
 console.log(accessToken);
 
@@ -45,8 +47,6 @@ function callback() {
 
 // profile content
 function pagesConten(profile, i) {
-  console.log('profile', profile);
-  console.log('pagesContent i ', i);
   let html;
   html = '<div class="card" style="width: 18rem;">';
   html += '<div class="card-body">';
@@ -55,7 +55,6 @@ function pagesConten(profile, i) {
   html += `<p class="card-text">${profile.name}</p>`;
   html += '<h6 class="card-subtitle mb-1 ">ID: </h6>';
   html += `<p class="card-text">${profile.id}</p>`;
-  // html += `<button class="subscribe btn btn-primary btn-block" role="button" aria-pressed="true" value=${i}>訂閱 Webhook</button>`
   html += `<button class="btn btn-primary btn-block" role="button" aria-pressed="true" id=${profile.id}>進入 Dashboard</button>`;
   html += '</div>';
   html += '</div>';
@@ -69,7 +68,6 @@ function jqueryDom(content) {
     $('.page-content').append(content);
     // 按鈕
     $('.btn').on('click', (event) => {
-      console.log(event.target.id);
       app.fb.pageId = event.target.id;
       window.location = `/user/dashboard.html?id=${event.target.id}`;
     });

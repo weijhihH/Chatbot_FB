@@ -1,3 +1,7 @@
+/* eslint-disable no-restricted-globals */
+/* eslint-disable no-plusplus */
+/* eslint-disable func-names */
+/* eslint-disable no-undef */
 const accessToken = app.getCookie('Authorization');
 
 
@@ -16,30 +20,30 @@ function callback() {
   $(function () {
     // click Message
     $('.messageList').on('click', () => {
-      switchList('message')
+      switchList('message');
     });
 
     // click Broadcast
     $('.broadcastList').on('click', () => {
-      switchList('broadcast')
+      switchList('broadcast');
     });
 
     // click people button
     $('.peopleList').on('click', () => {
-      switchList('people')
-      // 跟後台要資料, db - people 
-      fetch('/api/'+app.cst.apiVersion+'/webhook/people/getInformation?pageId='+app.fb.pageId,{
-        method:'GET',
-        headers:{
-          'Authorization': 'Bearer '+ accessToken,
-        }
+      switchList('people');
+      // 跟後台要資料, db - people;
+      fetch(`/api/${app.cst.apiVersion}/webhook/people/getInformation?pageId=${app.fb.pageId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       })
-      .then(res => res.json())
-      .then((res) => {
+        .then(res => res.json())
+        .then((res) => {
         // 將資料 render to table
         // console.log('res data', res.data)
-        $('#peopleTable').append(addNewPeopleRow(res.data));
-      })
+          $('#peopleTable').append(addNewPeopleRow(res.data));
+        });
     });
 
     function switchList(content) {
@@ -66,35 +70,35 @@ function callback() {
     // 處理 Wellcome sreen button
     // 呼叫 api and render to html;
     $('.navWellcomeMessageGreeting').on('click', () => {
-      fetch('/api/'+app.cst.apiVersion+'/webhook/greeting/getInformation?pageId='+app.fb.pageId,{
-        method:'GET',
-        headers:{
-          'Authorization': 'Bearer '+ accessToken,
-        }
+      fetch(`/api/${app.cst.apiVersion}/webhook/greeting/getInformation?pageId=${app.fb.pageId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       })
-      .then(res => res.json())
-      .then((res) => {
+        .then(res => res.json())
+        .then((res) => {
         // 將現有資料清掉, 避免重複按的時候出錯
-        delForm();
-        // Server's data render to html
-        let text;
-        let response = res.data
-        // console.log(res.data);
-        if(response === 'NoData') {
-          text = '請輸入問候語'
-          $('#mainContent').append(wellcomeScreenContent(text));
-        } else {
+          delForm();
+          // Server's data render to html
+          let text;
+          const response = res.data;
+          // console.log(res.data);
+          if (response === 'NoData') {
+            text = '請輸入問候語';
+            $('#mainContent').append(wellcomeScreenContent(text));
+          } else {
           // 有現成資料, 將資料 render 進去表格, 並且讓表格 disabled
-          $('#mainContent').append(wellcomeScreenContent(response));
-        }
-      })
-      .then((res) => {
-        $('#wellcomeMessageFormGreeting').show();
-        $('#wellcomeMessageForm').hide();
-      })
-      .catch((err) => {
-        // console.log('err')
-      })
+            $('#mainContent').append(wellcomeScreenContent(response));
+          }
+        })
+        .then(() => {
+          $('#wellcomeMessageFormGreeting').show();
+          $('#wellcomeMessageForm').hide();
+        })
+        .catch((err) => {
+          console.log('err', err);
+        });
     });
 
 
@@ -102,46 +106,46 @@ function callback() {
     // 呼叫 api and render to html;
 
     $('.navWellcomeMessage').on('click', () => {
-      fetch('/api/'+app.cst.apiVersion+'/webhook/wellcomeMessage/getInformation?pageId='+app.fb.pageId+'&payload=getStarted',{
-        method:'GET',
-        headers:{
-          'Authorization': 'Bearer '+ accessToken,
-        }
+      fetch(`/api/${app.cst.apiVersion}/webhook/wellcomeMessage/getInformation?pageId=${app.fb.pageId}&payload=getStarted`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       })
-      .then(res => res.json())
-      .then((res) => {
+        .then(res => res.json())
+        .then((res) => {
         // 移除 wellcome Screen 的內容
-        delForm();
+          delForm();
 
-        
-        // 如果資料庫沒有存任何 template
-        if(res.data === 'NoData') {
-          app.buttonTemplate.numberOfSet = 1;
-          $('#mainContent').append(wellcomeMessageContent(res.data));
-          $('.form-control').prop('readonly', false);
-        } else {
-        // 資料庫已經有 template 資料, 取出來必且 render to html
-          let info = JSON.parse(res.data.info)
-          // console.log(info);
-          if(info.attachment.payload.template_type === 'button') {
-            app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length
-            $('#mainContent').append(wellcomeMessageContent(info));
 
-            $('div.form-row').each(function() {
-              $('.addButtonTemplate').prop('disabled', true);
-              $('.deleteButtonTemplate').prop('disabled', true);
-              $('.payload-type').prop('disabled',true);
-            })
+          // 如果資料庫沒有存任何 template
+          if (res.data === 'NoData') {
+            app.buttonTemplate.numberOfSet = 1;
+            $('#mainContent').append(wellcomeMessageContent(res.data));
+            $('.form-control').prop('readonly', false);
+          } else {
+            // 資料庫已經有 template 資料, 取出來必且 render to html
+            const info = JSON.parse(res.data.info);
+            // console.log(info);
+            if (info.attachment.payload.template_type === 'button') {
+              app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length;
+              $('#mainContent').append(wellcomeMessageContent(info));
+
+              $('div.form-row').each(() => {
+                $('.addButtonTemplate').prop('disabled', true);
+                $('.deleteButtonTemplate').prop('disabled', true);
+                $('.payload-type').prop('disabled', true);
+              });
+            }
           }
-        }
-      })
-      .then(() => {
-        $('#wellcomeMessageFormGreeting').hide(); 
-        $('#wellcomeMessageForm').show();
-      })
-      .catch((err) => {
-        // console.log('err',err);
-      })
+        })
+        .then(() => {
+          $('#wellcomeMessageFormGreeting').hide();
+          $('#wellcomeMessageForm').show();
+        })
+        .catch((err) => {
+          console.log('err', err);
+        });
     });
 
     // 按下 broadcast 內的 message setting button
@@ -149,91 +153,91 @@ function callback() {
       // console.log('.navBroadcastSetting')
       delForm();
       $('#mainContentBroadcast').append(addSets());
-      fetch(`/api/${app.cst.apiVersion}/broadcast/getInformation?pageId=${app.fb.pageId}`,{
-        method:'GET',
-        headers:{
-          'Authorization': 'Bearer '+ accessToken,
-        }
+      fetch(`/api/${app.cst.apiVersion}/broadcast/getInformation?pageId=${app.fb.pageId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       })
-      .then(res => res.json())
-      .then(res => {
-        console.log('res', res)
-        // data was not found in db
-        if (res.data === 'NoData') {
-          console.log('data not found in db.')
-        }  else{
+        .then(res => res.json())
+        .then((res) => {
+          console.log('res', res);
+          // data was not found in db
+          if (res.data === 'NoData') {
+            console.log('data not found in db.');
+          } else {
           // 資料庫有資料, 判斷資料型態 (attachment or message)
-          res.data.forEach(e => {
+            res.data.forEach((e) => {
             // console.log('element', e);
-            if(e.event === 'attachment') {
+              if (e.event === 'attachment') {
               // console.log('attachment')
-              const payload = e.payload
-              const info = JSON.parse(e.info)
-              app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length
-              // console.log('12313', app.buttonTemplate.numberOfSet)
-              $('#mainContentBroadcast').append(wellcomeMessageContent(info,true,payload))
-              // payload 欄位不用填寫, 直接帶給後台 broadcast
-              $('.eventType').remove(); 
-            } else if (e.event === 'message') {
-              $('#mainContentBroadcast').append(textResponse(e,true))
-              // payload 欄位不用填寫, 直接帶給後台 broadcast
-              $('.eventType').remove();
-            }
-          });
-          // 將 日期/時間 設定 render to html
-          // res.data.broadcast[0]
-          // res.data.repeatDate[0]
-          const startDate = new Date(res.broadcast[0].startDate)
-          const startTime = tConvert(res.broadcast[0].startTime)
-          const timezone = res.broadcast[0].timezone
-          const repeat = res.repeatDate
-          console.log('startTime', startTime)
-          $('#mainContentBroadcast').append(addDateTimePicker());
-          $('#mainContentBroadcast').append(addRepeatSlector());
-          // render broadcast setting (時間/日期/週期)
-          // 處理日期選取
-          $('#datetimepicker4').datetimepicker({
-            format: 'L',
-            date: startDate,
-          });
-          $('.timeInput').val(startTime);
-          // 處理時間選取
-          $('#datetimepicker3').datetimepicker({
-            format: 'LT',
-            stepping: 1, // 單位是半個小時
-          });
-          $("select#timezone").val(timezone)
-
-          $.each($("input[name='repeatDate']"), function () {
-            repeat.forEach(e => {
-              if(e === $(this).val()) {
-                $(this).prop('checked',true)
-                $(this).parent().attr('class','btn btn-outline-primary btn-sm repeatSlector active')
+                const { payload } = e;
+                const info = JSON.parse(e.info);
+                app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length;
+                // console.log('12313', app.buttonTemplate.numberOfSet)
+                $('#mainContentBroadcast').append(wellcomeMessageContent(info, true, payload));
+                // payload 欄位不用填寫, 直接帶給後台 broadcast
+                $('.eventType').remove();
+              } else if (e.event === 'message') {
+                $('#mainContentBroadcast').append(textResponse(e, true));
+                // payload 欄位不用填寫, 直接帶給後台 broadcast
+                $('.eventType').remove();
               }
             });
-          })
+            // 將 日期/時間 設定 render to html
+            // res.data.broadcast[0]
+            // res.data.repeatDate[0]
+            const startDate = new Date(res.broadcast[0].startDate);
+            const startTime = tConvert(res.broadcast[0].startTime);
+            const { timezone } = res.broadcast[0].timezone;
+            const repeat = res.repeatDate;
+            console.log('startTime', startTime);
+            $('#mainContentBroadcast').append(addDateTimePicker());
+            $('#mainContentBroadcast').append(addRepeatSlector());
+            // render broadcast setting (時間/日期/週期)
+            // 處理日期選取
+            $('#datetimepicker4').datetimepicker({
+              format: 'L',
+              date: startDate,
+            });
+            $('.timeInput').val(startTime);
+            // 處理時間選取
+            $('#datetimepicker3').datetimepicker({
+              format: 'LT',
+              stepping: 1, // 單位是半個小時
+            });
+            $('select#timezone').val(timezone);
 
-          // // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
-          $('.btn').prop('disabled', true)
-          $('.form-control').prop('readonly', true)
-          $('.custom-select').prop('disabled', true);
-          $('#editFormButton').prop('disabled', false);
-          $('.broadcastRepeatDate').prop('disabled',true)
-        }
-        
-      })
+            $.each($("input[name='repeatDate']"), function () {
+              repeat.forEach((e) => {
+                if (e === $(this).val()) {
+                  $(this).prop('checked', true);
+                  $(this).parent().attr('class', 'btn btn-outline-primary btn-sm repeatSlector active');
+                }
+              });
+            });
+
+            // // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
+            $('.btn').prop('disabled', true);
+            $('.form-control').prop('readonly', true);
+            $('.custom-select').prop('disabled', true);
+            $('#editFormButton').prop('disabled', false);
+            $('.broadcastRepeatDate').prop('disabled', true);
+          }
+        });
     });
 
     function tConvert(time) {
+      let times;
       // Check correct time format and split into components
-      time = time.toString().match(/^([01]\d|2[0-3])(:)([0-5]\d)(:[0-5]\d)?$/) || [time];
+      times = time.toString().match(/^([01]\d|2[0-3])(:)([0-5]\d)(:[0-5]\d)?$/) || [time];
 
-      if (time.length > 1) { // If time format correct
-        time = time.slice(1); // Remove full string match value
-        time[5] = +time[0] < 12 ? ' AM' : ' PM'; // Set AM/PM
-        time[0] = +time[0] % 12 || 12; // Adjust hours
+      if (times.length > 1) { // If time format correct
+        times = times.slice(1); // Remove full string match value
+        times[5] = +times[0] < 12 ? ' AM' : ' PM'; // Set AM/PM
+        times[0] = +times[0] % 12 || 12; // Adjust hours
       }
-      return time.join(''); // return adjusted time or original string
+      return times.join(''); // return adjusted time or original string
     }
 
 
@@ -242,44 +246,44 @@ function callback() {
       delForm();
       $('#mainContent').append(addSets());
       // console.log('.navMoreSetting')
-      fetch(`/api/${app.cst.apiVersion}/webhook/moreSetting/getInformation?pageId=${app.fb.pageId}`,{
-        method:'GET',
-        headers:{
-          'Authorization': 'Bearer '+ accessToken,
-        }
+      fetch(`/api/${app.cst.apiVersion}/webhook/moreSetting/getInformation?pageId=${app.fb.pageId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       })
-      .then(res => res.json())
-      .then(res => {
+        .then(res => res.json())
+        .then((res) => {
         // console.log('response',res.data)
-        // data was not found in db 
-        if (res.data === 'NoData') {
+        // data was not found in db
+          if (res.data === 'NoData') {
           // console.log('data not found in db.')
-        } else{
+          } else {
           // console.log(res.data);
           // 資料庫有資料, 判斷資料型態 (attachment or message)
-          res.data.forEach(e => {
+            res.data.forEach((e) => {
             // console.log('element', e);
-            if(e.event === 'attachment') {
+              if (e.event === 'attachment') {
               // console.log('attachment')
-              const payload = e.payload
-              const info = JSON.parse(e.info)
-              app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length
-              // console.log('12313', app.buttonTemplate.numberOfSet)
-              $('#mainContent').append(wellcomeMessageContent(info,true,payload))
-            } else if (e.event === 'message') {
-              $('#mainContent').append(textResponse(e,true))
-            }
-          });
-          // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
-          $('.btn').prop('disabled', true)
-          $('.form-control').prop('readonly', true)
-          $('.custom-select').prop('disabled', true);
-          $('#editFormButton').prop('disabled', false);
-        }
-      })
-      .catch(err => {
-        // console.log('err',err)
-      })
+                const { payload } = e;
+                const info = JSON.parse(e.info);
+                app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length;
+                // console.log('12313', app.buttonTemplate.numberOfSet)
+                $('#mainContent').append(wellcomeMessageContent(info, true, payload));
+              } else if (e.event === 'message') {
+                $('#mainContent').append(textResponse(e, true));
+              }
+            });
+            // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
+            $('.btn').prop('disabled', true);
+            $('.form-control').prop('readonly', true);
+            $('.custom-select').prop('disabled', true);
+            $('#editFormButton').prop('disabled', false);
+          }
+        })
+        .catch((err) => {
+          console.log('err', err);
+        });
     });
 
     //
@@ -288,9 +292,9 @@ function callback() {
 
     // 按下增加 button type 按鈕, 將後台資料 render to html
     $('#mainContentBroadcast').on('click', '#addNewSetButton', () => {
-      if(!app.broadcast.numberOfSet) {
-        const buttonType = $('#addNewSetSelector').val()
-        if(buttonType === 'textResponse') {
+      if (!app.broadcast.numberOfSet) {
+        const buttonType = $('#addNewSetSelector').val();
+        if (buttonType === 'textResponse') {
           $('#mainContentBroadcast').append(textResponse());
           $('#mainContentBroadcast').append(addDateTimePicker());
           $('#mainContentBroadcast').append(addRepeatSlector());
@@ -303,12 +307,11 @@ function callback() {
           $('#mainContentBroadcast').append(addRepeatSlector());
           $('.form-control').prop('readonly', false);
           $('.eventType').remove();
-
         } else {
-          alert('請選擇一種類型')
+          alert('請選擇一種類型');
         }
       } else {
-        alert('組數已達上限,請先將現有設定刪除後才能新增')
+        alert('組數已達上限,請先將現有設定刪除後才能新增');
       }
       $('.upButton').hide();
       $('.downButton').hide();
@@ -322,154 +325,151 @@ function callback() {
         format: 'LT',
         stepping: 1, // 單位是半個小時
       });
-
     });
 
     // 將資料送出到後台 (broadcast setting)
     $('#mainContentBroadcast').on('click', 'button#submitFormButton', () => {
       event.preventDefault();
-      console.log('test mainContentBroadcast')
+      console.log('test mainContentBroadcast');
       // 整理資料
-      let data = [];
-      $('.moreSettingDiv').each(function(index) {
+      const data = [];
+      $('.moreSettingDiv').each(function (index) {
         // event : message or attachment
-        let event = $(this).attr('eventType')
+        const event = $(this).attr('eventType');
         // handleType = message or postback (定義是針對 message or postback event 回覆)
         // let handleType = $('input.form-control.payload').attr('handleType')
-        const handleType = 'broadcast'
+        const handleType = 'broadcast';
         // 考慮不同情況整理資料
         // 當輸入訊息是 message 的時候 ; 非 postback event , 且是一般訊息回覆
         // let payload = $(this).find('.payload').val()
-        const payload = 'broadcast'
-        let text = $(this).find('.text').val()
-        const source = "broadcast"
-        let pageId = app.fb.pageId
+        const payload = 'broadcast';
+        const text = $(this).find('.text').val();
+        const source = 'broadcast';
+        const { pageId } = app.fb;
 
         // 處理排程時間設定
         // 選 repeat date
-        let repeatDate = [];
+        const repeatDate = [];
         $.each($("input[name='repeatDate']:checked"), function () {
-          repeatDate.push($(this).val())
-        })
+          repeatDate.push($(this).val());
+        });
         // 選 開始日期跟時間
         // 時間由 AMPM 轉為 24-hours
-        const date = $(".dateInput")[0].value
-        let time = $(".timeInput")[0].value
+        const date = $('.dateInput')[0].value;
+        const time = $('.timeInput')[0].value;
         let hours = Number(time.match(/^(\d+)/)[1]);
-        let minutes = Number(time.match(/:(\d+)/)[1]);
-        let AMPM = time.match(/\s(.*)$/)[1];
-        if(AMPM == "PM" && hours<12) hours = hours+12;
-        if(AMPM == "AM" && hours==12) hours = hours-12;
+        const minutes = Number(time.match(/:(\d+)/)[1]);
+        const AMPM = time.match(/\s(.*)$/)[1];
+        if (AMPM === 'PM' && hours < 12) hours += 12;
+        if (AMPM === 'AM' && hours === 12) hours -= 12;
         let sHours = hours.toString();
         let sMinutes = minutes.toString();
-        if(hours<10) sHours = "0" + sHours;
-        if(minutes<10) sMinutes = "0" + sMinutes;
-        const twentyFourHoursTime = sHours+ ":"+sMinutes;
+        if (hours < 10) sHours = `0${sHours}`;
+        if (minutes < 10) sMinutes = `0${sMinutes}`;
+        const twentyFourHoursTime = `${sHours}:${sMinutes}`;
         // 選 timezone
-        const timezone = $("select#timezone option:selected").val()
+        const timezone = $('select#timezone option:selected').val();
 
-        if( event === 'message') {
+        if (event === 'message') {
           data.push({
-            "source": source,
-            "pageId": pageId,
-            "position": index,
-            "event": event, // event : message or attachment
-            "payload": payload,
-            "handleType": handleType,
-            "message": {
-                "text": text
-              },
-            "repeatDate": repeatDate,
-            "date": date,
-            "time": twentyFourHoursTime,
-            "timezone": timezone
-          })
-        } else if(event === 'attachment') {
+            source,
+            pageId,
+            position: index,
+            event, // event : message or attachment
+            payload,
+            handleType,
+            message: {
+              text,
+            },
+            repeatDate,
+            date,
+            time: twentyFourHoursTime,
+            timezone,
+          });
+        } else if (event === 'attachment') {
           // console.log(`blockType === 'buttonTemplate'`)
           // 處理 button template 中的 button 資料
           const textArr = [];
           const payloadArr = [];
           const payloadType = [];
-          
-          $(this).find(":selected").each(function() {
-            payloadType.push($(this).val())
-          })
-          $(this).find("input.form-control.button.text").each(function() {
-            textArr.push($(this).val())
-          })
-          $(this).find("input.form-control.button.payload").each(function() {
-            payloadArr.push($(this).val())
-          })
+
+          $(this).find(':selected').each(function () {
+            payloadType.push($(this).val());
+          });
+          $(this).find('input.form-control.button.text').each(function () {
+            textArr.push($(this).val());
+          });
+          $(this).find('input.form-control.button.payload').each(function () {
+            payloadArr.push($(this).val());
+          });
           const buttons = [];
-          for (let i =0; i< textArr.length ; i++) {
-            const obj = {};        
+          for (let i = 0; i < textArr.length; i++) {
+            const obj = {};
             obj.type = payloadType[i];
             obj.title = textArr[i];
-            if(obj.type === 'web_url') {
+            if (obj.type === 'web_url') {
               obj.url = payloadArr[i];
             } else if (obj.type === 'postback') {
-              obj.payload = payloadArr[i]
+              obj.payload = payloadArr[i];
             }
             buttons.push(obj);
           }
 
           data.push({
-            "source": source,
-            "pageId": pageId,
-            "position": index,
-            "event": event, // event : message or attachment
-            "payload": payload,
-            "handleType": handleType,
-            "message":
+            source,
+            pageId,
+            position: index,
+            event, // event : message or attachment
+            payload,
+            handleType,
+            message:
               {
-                "template_type": "button",
-                "text": text,
-                "buttons": buttons,
+                template_type: 'button',
+                text,
+                buttons,
               },
-            "repeatDate": repeatDate,
-            "date": date,
-            "time": twentyFourHoursTime,
-            "timezone": timezone
-          })
+            repeatDate,
+            date,
+            time: twentyFourHoursTime,
+            timezone,
+          });
         }
-      })
-      
+      });
+
       console.log('data output', data);
       //  2. 資料送進後台
-      fetch('/api/'+app.cst.apiVersion+'/broadcast',{
+      fetch(`/api/${app.cst.apiVersion}/broadcast`, {
         method: 'POST',
-        headers:{
-          'Authorization': 'Bearer '+ accessToken,
-          'Content-Type': 'application/json'
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          "data": data
+          data,
+        }),
+      })
+        .then(res => res.json())
+        .then((res) => {
+          console.log('res', res);
+          // // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
+          $('.btn').prop('disabled', true);
+          $('.form-control').prop('readonly', true);
+          $('.custom-select').prop('disabled', true);
+          $('#editFormButton').prop('disabled', false);
+          $('.broadcastRepeatDate').prop('disabled', true);
+          alert('資料存入成功');
         })
-      })
-      .then(res => res.json())
-      .then(res => {
-        console.log('res', res)
-        // // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
-        $('.btn').prop('disabled', true)
-        $('.form-control').prop('readonly', true)
-        $('.custom-select').prop('disabled', true);
-        $('#editFormButton').prop('disabled', false);
-        $('.broadcastRepeatDate').prop('disabled',true)
-        alert('資料存入成功')
-        
-      })
-      .catch(err => {
-        console.log('err', err)
-        alert('資料存入失敗')
-      })
-
+        .catch((err) => {
+          console.log('err', err);
+          alert('資料存入失敗');
+        });
     }); // end 將資料送出到後台 (broadcast setting)
 
     // 操作 delete button - broadcast setting
     $('#mainContentBroadcast').on('click', '.deleteButton', () => {
-      $('.moreSettingDiv').each(function() {
+      $('.moreSettingDiv').each(function () {
         $(this).remove();
-      })
+      });
       app.broadcast.numberOfSet = null;
     });
 
@@ -533,12 +533,12 @@ function callback() {
 
     // DOM event for Greeting message edit button;
     $('#mainContent').on('click', '#wellcomeScreenEditButton', () => {
-      const html = `<button type="submit" id="wellcomeScreenSubmitButton" class="btn btn-primary mb-2">Submit</button>`
-      if(app.greetingMessage.SubmitButtonStatus === null) {
+      const html = '<button type="submit" id="wellcomeScreenSubmitButton" class="btn btn-primary mb-2">Submit</button>';
+      if (app.greetingMessage.SubmitButtonStatus === null) {
         $('#wellcomeScreenTextArea').prop('readonly', false);
         $('#wellcomeScreenEditButton').after(html);
         $('#wellcomeScreenEditButton').prop('disabled', true);
-        app.greetingMessage.SubmitButtonStatus = true
+        app.greetingMessage.SubmitButtonStatus = true;
       } else if (app.greetingMessage.SubmitButtonStatus === true) {
         $('#wellcomeScreenTextArea').prop('readonly', false);
         $('#wellcomeScreenEditButton').prop('disabled', true);
@@ -548,30 +548,30 @@ function callback() {
 
     // DOM event for Greeting message edit button;
     $('#mainContent').on('click', '#editFormButton', () => {
-          // console.log('12321')
-          if(app.moreSetting.SubmitButtonStatus === null || app.moreSetting.SubmitButtonStatus === true) {
-            $('.btn').prop('disabled', false) // 解除按鈕鎖定
-            $('.form-control').prop('readonly', false);
-            $('.custom-select').prop('disabled', false);
-            $('#editFormButton').prop('disabled', true);
-            $('#submitFormButton').prop('disabled', false);
-            app.moreSetting.SubmitButtonStatus = true
-          }
-        });
+      // console.log('12321')
+      if (app.moreSetting.SubmitButtonStatus === null || app.moreSetting.SubmitButtonStatus === true) {
+        $('.btn').prop('disabled', false); // 解除按鈕鎖定
+        $('.form-control').prop('readonly', false);
+        $('.custom-select').prop('disabled', false);
+        $('#editFormButton').prop('disabled', true);
+        $('#submitFormButton').prop('disabled', false);
+        app.moreSetting.SubmitButtonStatus = true;
+      }
+    });
 
     // DOM event for Greeting message edit button;
     $('#mainContentBroadcast').on('click', '#editFormButton', () => {
-          // console.log('12321')
-          if(app.moreSetting.SubmitButtonStatus === null || app.moreSetting.SubmitButtonStatus === true) {
-            $('.btn').prop('disabled', false) // 解除按鈕鎖定
-            $('.form-control').prop('readonly', false);
-            $('.custom-select').prop('disabled', false);
-            $('#editFormButton').prop('disabled', true);
-            $('#submitFormButton').prop('disabled', false);
-            $('.broadcastRepeatDate').prop('disabled',false);
-            app.moreSetting.SubmitButtonStatus = true
-          }
-        });
+      // console.log('12321')
+      if (app.moreSetting.SubmitButtonStatus === null || app.moreSetting.SubmitButtonStatus === true) {
+        $('.btn').prop('disabled', false); // 解除按鈕鎖定
+        $('.form-control').prop('readonly', false);
+        $('.custom-select').prop('disabled', false);
+        $('#editFormButton').prop('disabled', true);
+        $('#submitFormButton').prop('disabled', false);
+        $('.broadcastRepeatDate').prop('disabled', false);
+        app.moreSetting.SubmitButtonStatus = true;
+      }
+    });
 
 
     // DOM event for wellcome screen's submit button;
@@ -579,54 +579,55 @@ function callback() {
       const textArea = $('#wellcomeScreenTextArea').val();
       $('#wellcomeScreenSubmitButton').prop('disabled', true);
       event.preventDefault();
-      fetch('/api/'+app.cst.apiVersion+'/webhook/greeting',{
-        method:'POST',
-        headers:{
-          'Authorization': 'Bearer '+ accessToken,
-          'Content-Type': 'application/json'
+      fetch(`/api/${app.cst.apiVersion}/webhook/greeting`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          "data":
-          { "text": textArea,
-            "pageId": app.fb.pageId
-          }
+          data:
+          {
+            text: textArea,
+            pageId: app.fb.pageId,
+          },
+        }),
+      })
+        .then(res => res.json())
+        .then(() => {
+          $('#wellcomeScreenTextArea').prop('readonly', true);
+          $('#wellcomeScreenEditButton').prop('disabled', false);
+          alert('儲存成功........');
         })
-      })
-      .then(res => res.json())
-      .then((res) =>{ 
-        $('#wellcomeScreenTextArea').prop('readonly', true);
-        $('#wellcomeScreenEditButton').prop('disabled', false);
-        alert('儲存成功........')
-      })
-      .catch((err) => { 
-        alert('儲存失敗........')
-      })
+        .catch(() => {
+          alert('儲存失敗........');
+        });
     });
 
     // 控制 Wellcome Message 內的 Edit Button
     $('#mainContent').on('click', '#wellcomeMessageEditButton', () => {
-      const html = `<button type="submit" id="wellcomeMessageSubmitButton" class="btn btn-primary mb-2">Submit</button>`
-      if(app.buttonTemplate.SubmitButtonStatus === null) {
+      const html = '<button type="submit" id="wellcomeMessageSubmitButton" class="btn btn-primary mb-2">Submit</button>';
+      if (app.buttonTemplate.SubmitButtonStatus === null) {
         $('.form-control').prop('readonly', false);
         $('#wellcomeMessageEditButton').after(html);
         $('#wellcomeMessageEditButton').prop('disabled', true);
 
-        $('div.form-row').each(function() {
+        $('div.form-row').each(() => {
           $('.addButtonTemplate').prop('disabled', false);
           $('.deleteButtonTemplate').prop('disabled', false);
-          $('.payload-type').prop('disabled',false);
-        })
-        app.buttonTemplate.SubmitButtonStatus = true
+          $('.payload-type').prop('disabled', false);
+        });
+        app.buttonTemplate.SubmitButtonStatus = true;
       } else if (app.buttonTemplate.SubmitButtonStatus === true) {
         $('.form-control').prop('readonly', false);
         $('#wellcomeMessageSubmitButton').remove();
         $('#wellcomeMessageEditButton').after(html);
         $('#wellcomeMessageEditButton').prop('disabled', true);
-        $('div.form-row').each(function() {
+        $('div.form-row').each(() => {
           $('.addButtonTemplate').prop('disabled', false);
           $('.deleteButtonTemplate').prop('disabled', false);
-          $('.payload-type').prop('disabled',false);
-        })      
+          $('.payload-type').prop('disabled', false);
+        });
       }
     });
 
@@ -651,7 +652,7 @@ function callback() {
       const buttons = [];
       const position = 0;
       const source = 'wellcomeMessage';
-      const {pageId} = app.fb;
+      const { pageId } = app.fb;
       const handleType = 'postback';
       const eventType = $(this).parent().attr('eventtype');
       const payload = 'getStarted';
@@ -676,49 +677,47 @@ function callback() {
       fetch(`/api/${app.cst.apiVersion}/webhook/wellcomeMessage`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${ accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           data:
           {
-            'message_type': 'button',
-            text: text,
-            buttons: buttons,
+            message_type: 'button',
+            text,
+            buttons,
           },
-          position: position,
-          pageId: pageId,
-          'source': source,
-          handleType: handleType,
-          'event': eventType,
-          payload: payload,
+          position,
+          pageId,
+          source,
+          handleType,
+          event: eventType,
+          payload,
         }),
       })
         .then(res => res.json())
-        .then((res) => {
+        .then(() => {
           $('.form-control').prop('readonly', true);
           $('#wellcomeMessageEditButton').prop('disabled', false);
           $('#wellcomeMessageSubmitButton').prop('disabled', true);
           $('div.form-row').each(() => {
-          $('.addButtonTemplate').prop('disabled', true);
-          $('.deleteButtonTemplate').prop('disabled', true);
-          $('.payload-type').prop('disabled',true);
-        });
+            $('.addButtonTemplate').prop('disabled', true);
+            $('.deleteButtonTemplate').prop('disabled', true);
+            $('.payload-type').prop('disabled', true);
+          });
 
           alert('儲存成功..........');
-        // console.log('fetch result:', res)
         })
-        .catch((err) => {
+        .catch(() => {
           alert('儲存失敗..........');
-        // console.log('fetch error: ', err)
         }); // end of fetch
     }); // end of wellcomeMessageForm 處理
 
     // 按下增加按鈕 (新增組數)
     $('#mainContent').on('click', '#addNewSetButton', () => {
-      const buttonType = $('#addNewSetSelector').val()
+      const buttonType = $('#addNewSetSelector').val();
       // console.log('buttonType',buttonType)
-      if(buttonType === 'textResponse') {
+      if (buttonType === 'textResponse') {
         // console.log('textResponse')
         $('#mainContent').append(textResponse());
       } else if (buttonType === 'buttonTemplate') {
@@ -727,7 +726,7 @@ function callback() {
         $('#mainContent').append(wellcomeMessageContent('NoData', true));
         $('.form-control').prop('readonly', false);
       } else {
-        alert('請選擇一種類型')
+        alert('請選擇一種類型');
       }
     });
 
@@ -771,108 +770,103 @@ function callback() {
     $('#mainContent').on('click', 'button#submitFormButton', () => {
       event.preventDefault();
       // data , 整理輸入資料
-      let data = [];
+      const data = [];
       // 1. 判斷輸入資料比數
-      $('.moreSettingDiv').each(function(index) {
+      $('.moreSettingDiv').each(function (index) {
         // event : message or attachment
-        let event = $(this).attr('eventType')
+        const event = $(this).attr('eventType');
         // handleType = message or postback (定義是針對 message or postback event 回覆)
-        let handleType = $('input.form-control.payload').attr('handleType')
+        const handleType = $('input.form-control.payload').attr('handleType');
         // 考慮不同情況整理資料
         // 當輸入訊息是 message 的時候 ; 非 postback event , 且是一般訊息回覆
-        let payload = $(this).find('.payload').val()
-        let text = $(this).find('.text').val()
-        let source = "moreSetting"
-        let pageId = app.fb.pageId
-        if( event === 'message') {
+        const payload = $(this).find('.payload').val();
+        const text = $(this).find('.text').val();
+        const source = 'moreSetting';
+        const { pageId } = app.fb;
+        if (event === 'message') {
           data.push({
-            "source": source,
-            "pageId": pageId,
-            "position": index,
-            "event": event, // event : message or attachment
-            "payload": payload,
-            "handleType": handleType,
-            "message": {
-                "text": text
-              }
-          })
-        } else if(event === 'attachment') {
+            source,
+            pageId,
+            position: index,
+            event, // event : message or attachment
+            payload,
+            handleType,
+            message: {
+              text,
+            },
+          });
+        } else if (event === 'attachment') {
           // console.log(`blockType === 'buttonTemplate'`)
           // 處理 button template 中的 button 資料
           const textArr = [];
           const payloadArr = [];
           const payloadType = [];
-          
-          $(this).find(":selected").each(function() {
-            payloadType.push($(this).val())
-          })
-          $(this).find("input.form-control.button.text").each(function() {
-            textArr.push($(this).val())
-          })
-          $(this).find("input.form-control.button.payload").each(function() {
-            payloadArr.push($(this).val())
-          })
+
+          $(this).find(':selected').each(function () {
+            payloadType.push($(this).val());
+          });
+          $(this).find('input.form-control.button.text').each(function () {
+            textArr.push($(this).val());
+          });
+          $(this).find('input.form-control.button.payload').each(function () {
+            payloadArr.push($(this).val());
+          });
 
           const buttons = [];
-          for (let i =0; i< textArr.length ; i++) {
-            const obj = {};        
+          for (let i = 0; i < textArr.length; i++) {
+            const obj = {};
             obj.type = payloadType[i];
             obj.title = textArr[i];
-            if(obj.type === 'web_url') {
+            if (obj.type === 'web_url') {
               obj.url = payloadArr[i];
             } else if (obj.type === 'postback') {
-              obj.payload = payloadArr[i]
+              obj.payload = payloadArr[i];
             }
             buttons.push(obj);
           }
-        
+
           data.push({
-            "source": source,
-            "pageId": pageId,
-            "position": index,
-            "event": event, // event : message or attachment
-            "payload": payload,
-            "handleType": handleType,
-            "message":
+            source,
+            pageId,
+            position: index,
+            event, // event : message or attachment
+            payload,
+            handleType,
+            message:
               {
-                "template_type": "button",
-                "text": text,
-                "buttons": buttons,
-              }
-          })
+                template_type: 'button',
+                text,
+                buttons,
+              },
+          });
         }
-
-
-
-      })
+      });
       // console.log('data output', data);
-      
+
       // 2. 資料送進後台
-      fetch('/api/'+app.cst.apiVersion+'/webhook/moreSetting',{
-        method:'POST',
-        headers:{
-          'Authorization': 'Bearer '+ accessToken,
-          'Content-Type': 'application/json'
+      fetch(`/api/${app.cst.apiVersion}/webhook/moreSetting`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          "data": data
-        })
+          data,
+        }),
       })
-      .then(res => res.json())
-      .then((res) => {
-        // console.log('ok',res);
+        .then(res => res.json())
+        .then(() => {
         // 成功, 將送出表單按鈕隱藏起來
-        $('#submitFormButton').prop('disabled', true);
-        $('.btn').prop('disabled', true);
-        $('.form-control').prop('readonly', true);
-        $('.custom-select').prop('disabled', true);
-        $('#editFormButton').prop('disabled', false);
-
-      })    
-      .catch((err) => {
-        console.log('error', err);
-        alert('資料存入失敗')
-      })
+          $('#submitFormButton').prop('disabled', true);
+          $('.btn').prop('disabled', true);
+          $('.form-control').prop('readonly', true);
+          $('.custom-select').prop('disabled', true);
+          $('#editFormButton').prop('disabled', false);
+        })
+        .catch((err) => {
+          console.log('error', err);
+          alert('資料存入失敗');
+        });
     });
   });
 }
@@ -906,7 +900,8 @@ function wellcomeMessageContent(info, addNewSet = false, payload = false) {
   }
   html += '<label>Button Template (下列 Button 選項需為 1~3 組)</label>';
   if (addNewSet && payload) {
-    html += `<input type="text" class="form-control payload eventType" handleType="postback" placeholder="message event" rows="1" value="${payload}" readonly>`;
+    html += `<input type="text" class="form-control payload eventType" 
+    handleType="postback" placeholder="message event" rows="1" value="${payload}" readonly>`;
   } else if (addNewSet && !payload) {
     html += '<input type="text" class="form-control payload eventType" handleType="postback" placeholder="message event" rows="1" readonly>';
   }
@@ -1038,8 +1033,8 @@ function addNewPeopleRow(data) {
       </thead>
     `;
   data.forEach((e) => {
-    lastSeenConvertToDate = app.formatDate(parseInt(e.lastSeen));
-    signedUpConvertToDate = app.formatDate(parseInt(e.signedUp));
+    lastSeenConvertToDate = app.formatDate(parseInt(e.lastSeen, 10));
+    signedUpConvertToDate = app.formatDate(parseInt(e.signedUp, 10));
     html += `
       <tbody>
         <tr>

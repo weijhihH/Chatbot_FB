@@ -19,6 +19,7 @@
         "no-unused-expressions": ["error", { "allowShortCircuit": true }],
         "consistent-return": "off",
         "no-restricted-syntax": ["error", "ForInStatement", "LabeledStatement", "WithStatement"],
-        "no-console": "off"
+        "no-console": "off",
+        "no-shadow": ["error", {"allow": ["error", "err", "result", "res", "insertContent"] }]
     }
 }
