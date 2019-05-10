@@ -1,43 +1,38 @@
+/* eslint-disable no-loop-func */
 /* eslint-disable camelcase */
 /* eslint-disable no-plusplus */
 const express = require('express');
-const mysql = require('mysql');
+// const mysql = require('mysql');
 const axios = require('axios');
 const bodyParser = require('body-parser');
 const cst = require('./util/constant.js');
 const key = require('./util/key.js');
+const dao = require('./dao/dao.js');
+const mysqlcon = require('./util/mysqlCon.js');
 
+const db = mysqlcon.con1;
 const app = express();
 
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// MySql Connected
-const db = mysql.createPool({
-  connectionLimit: 100,
-  host: key.MYSQL.host,
-  user: key.MYSQL.user,
-  password: key.MYSQL.password,
-  database: key.MYSQL.database,
-});
-
 // 檢查 accessToken and expired, lognin api 沒檢查
-app.use(`/api/${cst.API_VERSION}/:id`, (req, res, next) => {
-  let accessToken = req.get('Authorization');
-  accessToken = accessToken.replace('Bearer ', '');
-  if (accessToken) {
-    db.query(`select * from user where accessToken = '${accessToken}';`, (error, result) => {
-      if (error) {
-        res.send({ error: 'DB error' });
-        throw error;
-      } else if (result.length !== 0 && result[0].expiredTime - Date.now() > 0) {
+app.use(`/api/${cst.API_VERSION}/:pageId`, async (req, res, next) => {
+  try {
+    let accessToken = req.get('Authorization');
+    accessToken = accessToken.replace('Bearer ', '');
+    if (accessToken) {
+      const checkResult = await dao.accessTokenChecked(accessToken);
+      const accessTokenexpired = checkResult[0].expiredTime - Date.now();
+      if (checkResult.length !== 0 && accessTokenexpired > 0) {
         next();
-      } else {
-        res.send({ error: 'AccessToken was not matched in DB' });
+        return true;
       }
-    });
-  } else {
-    res.send({ error: 'AccessToken was not found' });
+      return res.send({ error: 'AccessToken was not matched in DB' });
+    }
+    return res.send({ error: 'AccessToken was not found' });
+  } catch (err) {
+    return res.send({ error: 'Some Error Happened' });
   }
 });
 
@@ -55,174 +50,216 @@ function findPagesList(accessToken) {
   });
 }
 
-// 處理 facebook weebhook 訂閱事件
+// 處理 facebook weebhook 訂閱事件, page 訂閱
 function pageSubscribed(data) {
   return new Promise((resolve, reject) => {
     const arrayPromise = [];
     data.forEach((arr) => {
-      // console.log('forEachLoop', arr);
+      const pageId = arr.id;
+      const accessToken = arr.access_token;
       arrayPromise.push(axios({
         method: 'POST',
-        url: `https://graph.facebook.com/${arr.id}/subscribed_apps`,
-        headers: { Authorization: `Bearer ${arr.access_token}` },
+        url: `https://graph.facebook.com/${pageId}/subscribed_apps`,
+        headers: { Authorization: `Bearer ${accessToken}` },
         data: {
           subscribed_fields: 'messages, messaging_postbacks, message_reads, messaging_checkout_updates',
         },
-      }).then(res => (res.data)).catch((error) => {
-        // console.log('error messages form FacebookPageSubscribed: ', error.data);
-        reject(error.response.data);
-      }));
+      }).then(res => res.data)
+        .catch(error => error.response.data));
     });
     Promise.all(arrayPromise)
-      .then((res) => {
-        resolve(res);
-      });
+      .then(res => resolve(res))
+      .catch(err => reject(err));
   });
 }
 
 
-app.get('/api/signin', (req, res) => {
-  let accessToken = req.get('Authorization');
-  accessToken = accessToken.replace('Bearer ', '');
-  const url = `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`;
-  const expiredTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 day
-  axios.get(url)
-    .then((response) => {
-    // 由 fb api 取得個人資訊
-      const data = {
-        id: response.data.id,
-        name: response.data.name,
-        email: response.data.email,
-        accessToken,
-        expiredTime,
-      };
-      return data;
-    })
-    .then((profile) => {
-      // 將個人資訊存成入 DB , 並且回傳 cookie
-      db.getConnection((err, connection) => {
-        if (err) throw err;
-        connection.query(`select * from user where id = '${profile.id}';`, (err, result) => {
-          if (err) {
-            connection.release();
-            res.send({ error: 'Invalid Token' });
-          } else if (result.length === 0) {
-            // DB 找不到會員資料, 新增一筆
-            connection.beginTransaction((error) => {
-              if (error) {
-                connection.release();
-                res.send({ error: 'Database Query Error' });
-              }
-              connection.query('insert into user set?', profile, (error) => {
-                connection.release();
-                if (error) {
-                  res.send({ error: 'Database Query Error' });
-                  return connection.rollback();
-                }
-                return connection.commit((error) => {
-                  if (error) {
-                    return connection.rollback(() => {
-                      res.send({ error: 'Database Query Error' });
-                      throw error;
-                    });
-                  }
-                  res.cookie('Authorization', profile.accessToken);
-                  return res.send({ data: profile });
-                });
-              });
-            }); // Mysql Transaction
-          } else if (result.length !== 0) {
-            // DB 有會員資料, 故更新資料庫
-            connection.query(`update user set ? where id = '${profile.id}'`, profile, (error) => {
-              connection.release();
-              if (error) {
-                res.send({ error: 'Database Query Error' });
-                return connection.rollback();
-              }
-              return connection.commit((error) => {
-                if (error) {
-                  return connection.rollback(() => {
-                    res.send({ error: 'Database Query Error' });
-                    throw error;
-                  });
-                }
-                res.cookie('Authorization', profile.accessToken);
-                return res.send({ data: profile });
-              });
-            });
-          }
-        });
-      });
-    }).catch((error) => {
-      res.send(error);
-      // console.log('error:', error);
-    });
+// app.get('/api/signin', async (req, res) => {
+//   let accessToken = req.get('Authorization');
+//   accessToken = accessToken.replace('Bearer ', '');
+//   const url = `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`;
+//   const expiredTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 day
+//   axios.get(url)
+//     .then((response) => {
+//     // 由 fb api 取得個人資訊
+//       const data = {
+//         id: response.data.id,
+//         name: response.data.name,
+//         email: response.data.email,
+//         accessToken,
+//         expiredTime,
+//       };
+//       return data;
+//     })
+//     .then((profile) => {
+//       // 將個人資訊存成入 DB , 並且回傳 cookie
+//       db.getConnection((err, connection) => {
+//         if (err) throw err;
+//         connection.beginTransaction((error) => {
+//           if (error) {
+//             connection.release();
+//             res.send({ error: 'Database Query Error' });
+//           }
+//           connection.query(`select * from user where id = '${profile.id}';`, (err, result) => {
+//             if (err) {
+//               connection.release();
+//               res.send({ error: 'Invalid Token' });
+//             } else if (result.length === 0) {
+//             // DB 找不到會員資料, 新增一筆
+//               connection.query('insert into user set?', profile, (error) => {
+//                 connection.release();
+//                 if (error) {
+//                   res.send({ error: 'Database Query Error' });
+//                   return connection.rollback();
+//                 }
+//                 return connection.commit((error) => {
+//                   if (error) {
+//                     return connection.rollback(() => {
+//                       res.send({ error: 'Database Query Error' });
+//                       throw error;
+//                     });
+//                   }
+//                   res.cookie('Authorization', profile.accessToken);
+//                   return res.send({ data: profile });
+//                 });
+//               });
+//               //
+//             //
+//             } else if (result.length !== 0) {
+//             // DB 有會員資料, 故更新資料庫
+//               connection.query(`update user set ? where id = '${profile.id}'`, profile, (error) => {
+//                 connection.release();
+//                 if (error) {
+//                   res.send({ error: 'Database Query Error' });
+//                   return connection.rollback();
+//                 }
+//                 return connection.commit((error) => {
+//                   if (error) {
+//                     return connection.rollback(() => {
+//                       res.send({ error: 'Database Query Error' });
+//                       throw error;
+//                     });
+//                   }
+//                   res.cookie('Authorization', profile.accessToken);
+//                   return res.send({ data: profile });
+//                 });
+//               });
+//             }
+//           });
+//         }); // Mysql Transaction
+//       });
+//     }).catch((error) => {
+//       res.send(error);
+//     });
+// });
+
+
+app.get('/api/signin', async (req, res) => {
+  try {
+    let accessToken = req.get('Authorization');
+    accessToken = accessToken.replace('Bearer ', '');
+    const url = `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`;
+    const expiredTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 day
+    const userDataFromFB = await axios.get(url);
+    console.log('userDataFromFB', userDataFromFB);
+    const profile = {
+      id: userDataFromFB.data.id,
+      name: userDataFromFB.data.name,
+      email: userDataFromFB.data.email,
+      accessToken,
+      expiredTime,
+    };
+    await dao.signIn(profile);
+    res.cookie('Authorization', profile.accessToken);
+    res.send({ data: profile });
+  } catch (error) {
+    res.send(error);
+  }
 });
 
-
-// 將 pages 存入資料庫
-function listAddedToken(pageLists, longLivedToken, accessToken) {
+// // 將 page資訊存入資料庫
+async function storePageInformation(pageLists, longLivedToken, accessToken) {
   return new Promise((resolve, reject) => {
-    const arrayPromise = [];
-    for (let i = 0; i < pageLists.length; i++) {
-      arrayPromise.push(pageLists[i]);
-      arrayPromise[i].longLivedToken = longLivedToken[i].access_token;
-      db.getConnection((err, connection) => {
-        if (err) {
-          connection.release();
-          reject(err);
-        }
-        const querySelect = `SELECT pages.* FROM user LEFT JOIN pages on user.id = pages.id 
-          where user.accessToken = '${accessToken}' and pages.pageId = '${pageLists[i].id}'`;
-        connection.query(querySelect, (err, result) => {
-          if (err) {
-            connection.release();
-            reject(err);
-          }
-          const dataInputDB = {
-            // id: result[0].id,
-            pageName: pageLists[i].name,
-            pageId: pageLists[i].id,
-            pageAccessToken: longLivedToken[i].access_token,
-          };
-          if (result.length > 0) {
-            dataInputDB.id = result[0].id;
-            // console.log('dataInputDB: ', dataInputDB);
-            const queryUpdate = `update pages set ? where pages.pageId = '${pageLists[i].id}'`;
-            connection.query(queryUpdate, dataInputDB, (err, result) => {
-              if (err) {
-                connection.release();
-                reject(err);
-              }
-              resolve(result);
-              // console.log('123123213', result);
-            });
-          } else {
-            const querySelectFindId = `select * from user where user.accessToken = '${accessToken}'`;
-            connection.query(querySelectFindId, (err, result) => {
-              if (err) {
-                connection.release();
-                return reject(err);
-              } if (result.length === 0) {
-                connection.release();
-                return reject(new Error({ error: 'Invalid accessToken' }));
-              }
-              dataInputDB.id = result[0].id;
-              const queryInsert = 'insert into pages set ?;';
-              connection.query(queryInsert, dataInputDB, (err, result) => {
-                connection.release();
-                if (err) {
-                  return reject(err);
-                }
-                return resolve(result);
-              });
-            });
-          }
-        });
-      });
-    }
+    const promiseArr = [];
+    promiseArr.push(pageLists.forEach((page, i) => {
+      const pageId = page.id;
+      const dataInputDB = {
+        pageName: page.name,
+        pageId: page.id,
+        pageAccessToken: longLivedToken[i].access_token,
+      };
+      // console.log('dataInputDB',dataInputDB);
+      dao.pageDataToDB(accessToken, pageId, dataInputDB);
+    }));
+    Promise.all(promiseArr)
+      .then(() => resolve(true))
+      .catch(error => reject(error));
   });
 }
+
+// // // 將 pages 存入資料庫   
+// function storePageInformation(pageLists, longLivedToken, accessToken) {
+//   return new Promise((resolve, reject) => {
+//     const arrayPromise = [];
+//     for (let i = 0; i < pageLists.length; i++) {
+//       arrayPromise.push(pageLists[i]);
+//       arrayPromise[i].longLivedToken = longLivedToken[i].access_token;
+//       db.getConnection((err, connection) => {
+//         if (err) {
+//           connection.release();
+//           reject(err);
+//         }
+//         const querySelect = `SELECT pages.* FROM user LEFT JOIN pages on user.id = pages.id
+//           where user.accessToken = '${accessToken}' and pages.pageId = '${pageLists[i].id}'`;
+//         connection.query(querySelect, (err, result) => {
+//           if (err) {
+//             connection.release();
+//             reject(err);
+//           }
+//           const dataInputDB = {
+//             // id: result[0].id,
+//             pageName: pageLists[i].name,
+//             pageId: pageLists[i].id,
+//             pageAccessToken: longLivedToken[i].access_token,
+//           };
+//           if (result.length > 0) {
+//             dataInputDB.id = result[0].id;
+//             // console.log('dataInputDB: ', dataInputDB);
+//             const queryUpdate = `update pages set ? where pages.pageId = '${pageLists[i].id}'`;
+//             connection.query(queryUpdate, dataInputDB, (err, result) => {
+//               if (err) {
+//                 connection.release();
+//                 reject(err);
+//               }
+//               resolve(result);
+//             });
+//           } else {
+//             const querySelectFindId = `select * from user where user.accessToken = '${accessToken}'`;
+//             connection.query(querySelectFindId, (err, result) => {
+//               if (err) {
+//                 connection.release();
+//                 return reject(err);
+//               } if (result.length === 0) {
+//                 connection.release();
+//                 return reject(new Error({ error: 'Invalid accessToken' }));
+//               }
+//               dataInputDB.id = result[0].id;
+//               const queryInsert = 'insert into pages set ?;';
+//               connection.query(queryInsert, dataInputDB, (err, result) => {
+//                 connection.release();
+//                 if (err) {
+//                   return reject(err);
+//                 }
+//                 return resolve(result);
+//               });
+//             });
+//           }
+//         });
+//       });
+//     }
+//   });
+// }
+
 
 // get facebook Long-lived token
 // GET / https://graph.facebook.com/oauth/access_token
@@ -258,45 +295,79 @@ app.get(`/api/${cst.API_VERSION}/profile`, async (req, res) => {
   let accessToken = req.get('Authorization');
   accessToken = accessToken.replace('Bearer ', '');
   try {
-    // 用 facebook accessToken 找到對應個人有幾個粉絲頁(fb page)
+    // 用 facebook accessToken 找到有幾個粉絲頁(fb page)
     const findPagesListResult = await findPagesList(accessToken);
     const pageLists = findPagesListResult.data.data;
     // 取得長期權杖
     const longLivedToken = await getLongLivedToken(pageLists);
-    await listAddedToken(pageLists, longLivedToken, accessToken);
-
-    // 將資料存入DB , id(user,foreign key),page_id,page_name,page_accessToken,expired_in
-    //
-    // longLivedToken
+    // 將資料存入DB , id(user,foreign key),page_id,page_name,page_accessToken,expired_time,longLivedToken
+    await storePageInformation(pageLists, longLivedToken, accessToken);
+    // 向 facebook 訂閱 page;
     await pageSubscribed(pageLists);
     res.send({ data: pageLists });
-  } catch (error) {
-    // console.log(error);
-    res.send({ error: '123' });
-  }
+  } catch (error) { res.send({ error }); }
 });
-
 
 // Global function
 // 進去資料庫找資料 , greetingMessage
 function checkGreetingMessage(pageId) {
   return new Promise((resolve, reject) => {
-    const query = `select * from greetingMessage where pageId = ${pageId}`;
-    db.query(query, (err, result) => {
+    // const para = ['greetingMessage', { pageId }];
+    const para = 'greetingMessage';
+    // const query = 'select * from ?? where ?';
+    const query = 'select * from ??';
+    db.query(query, para, (err, result) => {
       if (err) {
+        console.log('111',err);
         return reject(err);
       }
+      console.log('222', result);
       return resolve(result);
     });
   });
 }
 
+// // Global function
+// // 進去資料庫找資料 , greetingMessage
+// function checkGreetingMessage(pageId) {
+//   return new Promise((resolve, reject) => {
+//     const query = `select * from greetingMessage where pageId = ${pageId}`;
+//     db.query(query, (err, result) => {
+//       if (err) {
+//         return reject(err);
+//       }
+//       return resolve(result);
+//     });
+//   });
+// }
+
+// // 機器人相關內容
+// app.get(`/api/${cst.API_VERSION}/webhook/greeting/:pageId`, async (req, res) => {
+//   // console.log(req.query.pageId);
+//   const { pageId } = req.query;
+//   try {
+//     const checkGreetingMessageResult = await checkGreetingMessage(pageId);
+//     if (checkGreetingMessageResult.length === 0) {
+//       res.send({ data: 'NoData' });
+//     } else {
+//       res.send({ data: checkGreetingMessageResult[0].text });
+//     }
+//   } catch (error) {
+//     res.send({ error: 'someting error happened' });
+//   }
+// });
+
 // 機器人相關內容
+
+// Greeting Message 內容讀取
 app.get(`/api/${cst.API_VERSION}/webhook/greeting/:pageId`, async (req, res) => {
   // console.log(req.query.pageId);
   const { pageId } = req.query;
+  const table = 'greetingMessage';
+  const condition = { pageId };
   try {
-    const checkGreetingMessageResult = await checkGreetingMessage(pageId);
+    const checkGreetingMessageResult = await dao.singleSelect(table, condition);
+    console.log('checkGreetingMessageResult', checkGreetingMessageResult);
     if (checkGreetingMessageResult.length === 0) {
       res.send({ data: 'NoData' });
     } else {
@@ -307,7 +378,83 @@ app.get(`/api/${cst.API_VERSION}/webhook/greeting/:pageId`, async (req, res) => 
   }
 });
 
-// 設置 Greeting message , 第一次聊天看到的訊息
+
+// // Greeting Message 內容寫入
+// app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
+//   const { pageId } = req.body.data;
+//   const greetingText = req.body.data.text;
+//   const requestBody = {
+//     get_started: {
+//       payload: 'getStarted',
+//     },
+//     greeting: [
+//       {
+//         locale: 'default',
+//         text: greetingText,
+//       },
+//     ],
+//   };
+//   try {
+//     // Find pageAccessToken
+//     const pageAccessToken = await dbFindPageAccessToken(pageId);
+//     // console.log('pageAccessToken', pageAccessToken);
+//     // SET Greeting request to FB;
+//     await fetchSetGreeting(pageAccessToken, requestBody);
+//     // 判別資料是否已經在資料庫存在
+//     const checkGreetingMessageResult = await checkGreetingMessage(pageId);
+//     // console.log('checkGreetingMessageResult', checkGreetingMessageResult);
+//     // 將資料存入資料庫
+//     const dataIntoGreetingMessageDB = {
+//       pageId,
+//       text: greetingText,
+//     };
+//     const queryInputData = 'insert into greetingMessage set ?';
+//     const queryUpdatedData = `update greetingMessage set ? where pageId ='${pageId}'`;
+//     if (checkGreetingMessageResult.length === 0) {
+//       // 資料庫無資料, 存一筆新的
+//       await greetingMessageDbUsed(queryInputData, dataIntoGreetingMessageDB);
+//       // console.log(insertToDB);
+//       res.send({ data: 'Inserted to DB' });
+//     } else {
+//       // 資料庫有資料, 更新資料
+//       await greetingMessageDbUsed(queryUpdatedData, dataIntoGreetingMessageDB);
+//       // console.log(updateToDB);
+//       res.send({ data: 'Updated to DB' });
+//     }
+//   } catch (error) {
+//     // console.log(error);
+//     res.send({ error: 'someting error happened' });
+//   }
+
+
+//   function greetingMessageDbUsed(query, data) {
+//     return new Promise((resolve, reject) => {
+//       db.query(query, data, (err, result) => {
+//         if (err) {
+//           return reject(err);
+//         }
+//         return resolve(result);
+//       });
+//     });
+//   }
+
+//   function fetchSetGreeting(pageAccessToken, request) {
+//     return new Promise((resolve, reject) => {
+//       axios({
+//         method: 'POST',
+//         url: 'https://graph.facebook.com/v3.2/me/messenger_profile',
+//         headers: {
+//           Authorization: `Bearer ${pageAccessToken}`,
+//           'Content-Type': 'application/json',
+//         },
+//         data: request,
+//       }).then(res => resolve(res.data))
+//         .catch(error => reject(error.data));
+//     });
+//   }
+// });
+
+// Greeting Message 內容寫入
 app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
   const { pageId } = req.body.data;
   const greetingText = req.body.data.text;
@@ -324,29 +471,24 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
   };
   try {
     // Find pageAccessToken
-    const pageAccessToken = await dbFindPageAccessToken(pageId);
-    // console.log('pageAccessToken', pageAccessToken);
-    // SET Greeting request to FB;
+    const pageSelectResult = await dao.singleSelect('pages', { pageId });
+    const { pageAccessToken } = pageSelectResult[0];
+    // 在 facebook 伺服器設定打招呼用語
     await fetchSetGreeting(pageAccessToken, requestBody);
     // 判別資料是否已經在資料庫存在
-    const checkGreetingMessageResult = await checkGreetingMessage(pageId);
-    // console.log('checkGreetingMessageResult', checkGreetingMessageResult);
+    const checkGreetingMessageResult = await dao.singleSelect('greetingMessage', { pageId });
     // 將資料存入資料庫
     const dataIntoGreetingMessageDB = {
       pageId,
       text: greetingText,
     };
-    const queryInputData = 'insert into greetingMessage set ?';
-    const queryUpdatedData = `update greetingMessage set ? where pageId ='${pageId}'`;
     if (checkGreetingMessageResult.length === 0) {
-      // 資料庫無資料, 存一筆新的
-      await greetingMessageDbUsed(queryInputData, dataIntoGreetingMessageDB);
-      // console.log(insertToDB);
+      // insert new data into db
+      await dao.insert('greetingMessage', dataIntoGreetingMessageDB);
       res.send({ data: 'Inserted to DB' });
     } else {
-      // 資料庫有資料, 更新資料
-      await greetingMessageDbUsed(queryUpdatedData, dataIntoGreetingMessageDB);
-      // console.log(updateToDB);
+      // update data
+      await dao.update('greetingMessage', dataIntoGreetingMessageDB, { pageId });
       res.send({ data: 'Updated to DB' });
     }
   } catch (error) {
@@ -393,6 +535,7 @@ function dbFindPageAccessToken(pageId) {
     });
   });
 }
+// 20190510
 
 app.get(`/api/${cst.API_VERSION}/webhook/wellcomeMessage/:pageId`, async (req, res) => {
   const input = {
