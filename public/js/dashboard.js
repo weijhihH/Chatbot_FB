@@ -125,7 +125,6 @@ function callback() {
             $('.form-control').prop('readonly', false);
           } else {
             // 資料庫已經有 template 資料, 取出來必且 render to html
-            // const info = JSON.parse(res.data.info);
             const { info } = res.data;
             // console.log(info);
             if (info.attachment.payload.template_type === 'button') {
@@ -173,7 +172,8 @@ function callback() {
               if (e.event === 'attachment') {
               // console.log('attachment')
                 const { payload } = e;
-                const info = JSON.parse(e.info);
+                // const info = JSON.parse(e.info);
+                const { info } = e;
                 app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length;
                 // console.log('12313', app.buttonTemplate.numberOfSet)
                 $('#mainContentBroadcast').append(wellcomeMessageContent(info, true, payload));
@@ -190,9 +190,8 @@ function callback() {
             // res.data.repeatDate[0]
             const startDate = new Date(res.broadcast[0].startDate);
             const startTime = tConvert(res.broadcast[0].startTime);
-            const { timezone } = res.broadcast[0].timezone;
+            const { timezone } = res.broadcast[0];
             const repeat = res.repeatDate;
-            console.log('startTime', startTime);
             $('#mainContentBroadcast').append(addDateTimePicker());
             $('#mainContentBroadcast').append(addRepeatSlector());
             // render broadcast setting (時間/日期/週期)
@@ -255,7 +254,6 @@ function callback() {
       })
         .then(res => res.json())
         .then((res) => {
-        // console.log('response',res.data)
         // data was not found in db
           if (res.data === 'NoData') {
           // console.log('data not found in db.')
@@ -263,11 +261,9 @@ function callback() {
           // console.log(res.data);
           // 資料庫有資料, 判斷資料型態 (attachment or message)
             res.data.forEach((e) => {
-            // console.log('element', e);
               if (e.event === 'attachment') {
-              // console.log('attachment')
                 const { payload } = e;
-                const info = JSON.parse(e.info);
+                const { info } = e;
                 app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length;
                 // console.log('12313', app.buttonTemplate.numberOfSet)
                 $('#mainContent').append(wellcomeMessageContent(info, true, payload));
@@ -1002,7 +998,7 @@ function textResponse(content, addNewSet = false) {
   }
   html += '<small class="form-text text-muted"></small>';
   if (addNewSet) {
-    const message = JSON.parse(content.info).text;
+    const message = content.info.text;
     html += `<input type="text" class="form-control button text" placeholder="輸入傳出去的文字" value="${message}">`;
   } else {
     html += '<input type="text" class="form-control button text" placeholder="輸入傳出去的文字">';

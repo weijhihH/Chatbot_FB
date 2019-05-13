@@ -4,18 +4,6 @@ const mysqlcon = require('../util/mysqlCon');
 const pool = mysqlcon.con;
 
 module.exports = {
-  // 驗證 accessToken
-  async accessTokenChecked(accessToken) {
-    const con = await pool.getConnection();
-    try {
-      const result = await con.query(`select * from user where accessToken = '${accessToken}';`);
-      con.release();
-      return result[0];
-    } catch (err) {
-      con.release();
-      throw new Error(err);
-    }
-  },
   async signIn(profile) {
     const con = await pool.getConnection();
     try {
@@ -35,7 +23,7 @@ module.exports = {
       throw new Error(err);
     }
   },
-  // 將 pageInformation 存入 talbe
+  // 將 pageInformation 存入 table
   async pageDataToDB(accessToken, pageId, dataInputDB) {
     const con = await pool.getConnection();
     const data = JSON.parse(JSON.stringify(dataInputDB));
@@ -67,24 +55,34 @@ module.exports = {
       throw new Error(err);
     }
   },
-  // select query
+  // 查詢 broadcastRepeat & rule tables
+  async SelectRuleLeftJoinbroadcastRepeatTable(pageId) {
+    const con = await pool.getConnection();
+    try {
+      const query = `select rule.rule from broadcastRepeat left join rule 
+      on broadcastRepeat.ruleId = rule.ruleid where pageId ='${pageId}'`;
+      const result = await con.query(query);
+      await con.release();
+      return result[0];
+    } catch (err) {
+      await con.release();
+      throw new Error(err);
+    }
+  },
+  // select query - No Transaction
   async singleSelect(table, conditionOne, operator, conditionTwo) {
     const con = await pool.getConnection();
     try {
       let result;
       let content;
       if (conditionOne && !operator && !conditionTwo) {
-        console.log(1111);
         content = [table, conditionOne];
         result = await con.query('select * from ?? where ?', content);
       } else if (conditionOne && conditionTwo) {
         content = [table, conditionOne, conditionTwo];
-        console.log('content', content);
         result = await con.query(`select * from ?? where ? ${operator} ?`, content);
-        console.log('result', result[0]);
       } else {
         result = await con.query('select * from ??', table);
-        // console.log(22222);
       }
       await con.release();
       return result[0];
@@ -93,6 +91,7 @@ module.exports = {
       throw new Error(err);
     }
   },
+  // insert query
   async insert(table, insertcontent) {
     const con = await pool.getConnection();
     try {
@@ -101,7 +100,6 @@ module.exports = {
       await con.query('START TRANSACTION');
       await con.query('COMMIT');
       await con.release();
-      console.log(111, result[0]);
       return result[0];
     } catch (err) {
       await con.query('ROLLBACK');
@@ -109,22 +107,91 @@ module.exports = {
       throw new Error(err);
     }
   },
-  async update(table, insertcontent, condition) {
+  // update query
+  async update(table, insertcontent, condition, operator, conditionTwo) {
     const con = await pool.getConnection();
     try {
       let content;
       let result;
       await con.query('START TRANSACTION');
-      if (table && insertcontent && condition) {
+      if (table && insertcontent && condition && !operator && !conditionTwo) {
         content = [table, insertcontent, condition];
         result = await con.query('update ?? set ? where ?', content);
-      } else if (table && insertcontent && !condition) {
+      } else if (table && insertcontent && !condition && !operator && !conditionTwo) {
         content = [table, insertcontent];
         result = await con.query('update ?? set ? where ?', content);
+      } else if (table && insertcontent && condition && operator && conditionTwo) {
+        content = [table, insertcontent, condition, conditionTwo];
+        result = await con.query(`update ?? set ? where ? ${operator} ?`, content);
       }
       await con.query('COMMIT');
       await con.release();
       return result[0];
+    } catch (err) {
+      await con.query('ROLLBACK');
+      await con.release();
+      throw new Error(err);
+    }
+  },
+  // del query
+  async del(table, conditionOne, operator, conditionTwo) {
+    const con = await pool.getConnection();
+    try {
+      let content;
+      let result;
+      await con.query('START TRANSACTION');
+      if (table && conditionOne && operator && conditionTwo) {
+        content = [table, conditionOne, conditionTwo];
+        result = await con.query(`delete from ?? where ? ${operator} ?`, content);
+      }
+      await con.query('COMMIT');
+      await con.release();
+      return result[0];
+    } catch (err) {
+      await con.query('ROLLBACK');
+      await con.release();
+      throw new Error(err);
+    }
+  },
+  // broadcast 資料更新
+  async broadcastDataUpdated(pageId, SendMessagecontent, source, broadcastSetContent, broadcastRepeatContent) {
+    const con = await pool.getConnection();
+    try {
+      console.log(broadcastSetContent.repeat);
+      await con.query('START TRANSACTION');
+      await con.query(`delete from sendMessage where pageId ='${pageId}' and source = '${source}'`);
+      await con.query('insert into sendMessage (`pageId`,`position`,`handleType`,`event`,`payload`,`source`,`info`) values ?', [SendMessagecontent]);
+      const broadcastSetSelectedresult = await con.query(`select * from broadcastSet where pageId = '${pageId}'`);
+      if (broadcastSetSelectedresult.length === 0) {
+        await con.query('insert into broadcastSet set ?', broadcastSetContent);
+      } else {
+        await con.query(`update broadcastSet set ? where pageId = '${pageId}'`, broadcastSetContent);
+      }
+      if (broadcastSetContent.repeat) {
+        await con.query(`delete from broadcastRepeat where pageId = '${pageId}' and ruleId between 1 and 7`);
+        await con.query('insert into broadcastRepeat (`pageId`,`ruleId`) values ?', [broadcastRepeatContent]);
+      } else {
+        await con.query(`delete from broadcastRepeat where pageId ='${pageId}'`);
+      }
+      await con.query('COMMIT');
+      await con.release();
+      return true;
+    } catch (err) {
+      await con.query('ROLLBACK');
+      await con.release();
+      throw new Error(err);
+    }
+  },
+  // moreSeetingDataUpdated 資料更新
+  async moreSeetingDataUpdated(pageId, SendMessagecontent, source) {
+    const con = await pool.getConnection();
+    try {
+      await con.query('START TRANSACTION');
+      await con.query(`delete from sendMessage where pageId ='${pageId}' and source = '${source}'`);
+      await con.query('insert into sendMessage (`pageId`,`position`,`handleType`,`event`,`payload`,`source`,`info`) values ?', [SendMessagecontent]);
+      await con.query('COMMIT');
+      await con.release();
+      return true;
     } catch (err) {
       await con.query('ROLLBACK');
       await con.release();
