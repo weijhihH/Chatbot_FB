@@ -68,18 +68,23 @@ module.exports = {
     }
   },
   // select query
-  async singleSelect(table, condition) {
+  async singleSelect(table, conditionOne, operator, conditionTwo) {
     const con = await pool.getConnection();
     try {
       let result;
       let content;
-      if (condition) {
+      if (conditionOne && !operator && !conditionTwo) {
         console.log(1111);
-        content = [table, condition];
+        content = [table, conditionOne];
         result = await con.query('select * from ?? where ?', content);
+      } else if (conditionOne && conditionTwo) {
+        content = [table, conditionOne, conditionTwo];
+        console.log('content', content);
+        result = await con.query(`select * from ?? where ? ${operator} ?`, content);
+        console.log('result', result[0]);
       } else {
         result = await con.query('select * from ??', table);
-        console.log(22222);
+        // console.log(22222);
       }
       await con.release();
       return result[0];
@@ -126,5 +131,4 @@ module.exports = {
       throw new Error(err);
     }
   },
-
 };

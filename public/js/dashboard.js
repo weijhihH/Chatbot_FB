@@ -125,7 +125,8 @@ function callback() {
             $('.form-control').prop('readonly', false);
           } else {
             // 資料庫已經有 template 資料, 取出來必且 render to html
-            const info = JSON.parse(res.data.info);
+            // const info = JSON.parse(res.data.info);
+            const { info } = res.data;
             // console.log(info);
             if (info.attachment.payload.template_type === 'button') {
               app.buttonTemplate.numberOfSet = info.attachment.payload.buttons.length;

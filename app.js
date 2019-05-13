@@ -1,4 +1,3 @@
-/* eslint-disable no-loop-func */
 /* eslint-disable camelcase */
 /* eslint-disable no-plusplus */
 const express = require('express');
@@ -73,87 +72,6 @@ function pageSubscribed(data) {
   });
 }
 
-
-// app.get('/api/signin', async (req, res) => {
-//   let accessToken = req.get('Authorization');
-//   accessToken = accessToken.replace('Bearer ', '');
-//   const url = `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`;
-//   const expiredTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 day
-//   axios.get(url)
-//     .then((response) => {
-//     // 由 fb api 取得個人資訊
-//       const data = {
-//         id: response.data.id,
-//         name: response.data.name,
-//         email: response.data.email,
-//         accessToken,
-//         expiredTime,
-//       };
-//       return data;
-//     })
-//     .then((profile) => {
-//       // 將個人資訊存成入 DB , 並且回傳 cookie
-//       db.getConnection((err, connection) => {
-//         if (err) throw err;
-//         connection.beginTransaction((error) => {
-//           if (error) {
-//             connection.release();
-//             res.send({ error: 'Database Query Error' });
-//           }
-//           connection.query(`select * from user where id = '${profile.id}';`, (err, result) => {
-//             if (err) {
-//               connection.release();
-//               res.send({ error: 'Invalid Token' });
-//             } else if (result.length === 0) {
-//             // DB 找不到會員資料, 新增一筆
-//               connection.query('insert into user set?', profile, (error) => {
-//                 connection.release();
-//                 if (error) {
-//                   res.send({ error: 'Database Query Error' });
-//                   return connection.rollback();
-//                 }
-//                 return connection.commit((error) => {
-//                   if (error) {
-//                     return connection.rollback(() => {
-//                       res.send({ error: 'Database Query Error' });
-//                       throw error;
-//                     });
-//                   }
-//                   res.cookie('Authorization', profile.accessToken);
-//                   return res.send({ data: profile });
-//                 });
-//               });
-//               //
-//             //
-//             } else if (result.length !== 0) {
-//             // DB 有會員資料, 故更新資料庫
-//               connection.query(`update user set ? where id = '${profile.id}'`, profile, (error) => {
-//                 connection.release();
-//                 if (error) {
-//                   res.send({ error: 'Database Query Error' });
-//                   return connection.rollback();
-//                 }
-//                 return connection.commit((error) => {
-//                   if (error) {
-//                     return connection.rollback(() => {
-//                       res.send({ error: 'Database Query Error' });
-//                       throw error;
-//                     });
-//                   }
-//                   res.cookie('Authorization', profile.accessToken);
-//                   return res.send({ data: profile });
-//                 });
-//               });
-//             }
-//           });
-//         }); // Mysql Transaction
-//       });
-//     }).catch((error) => {
-//       res.send(error);
-//     });
-// });
-
-
 app.get('/api/signin', async (req, res) => {
   try {
     let accessToken = req.get('Authorization');
@@ -196,70 +114,6 @@ async function storePageInformation(pageLists, longLivedToken, accessToken) {
       .catch(error => reject(error));
   });
 }
-
-// // // 將 pages 存入資料庫   
-// function storePageInformation(pageLists, longLivedToken, accessToken) {
-//   return new Promise((resolve, reject) => {
-//     const arrayPromise = [];
-//     for (let i = 0; i < pageLists.length; i++) {
-//       arrayPromise.push(pageLists[i]);
-//       arrayPromise[i].longLivedToken = longLivedToken[i].access_token;
-//       db.getConnection((err, connection) => {
-//         if (err) {
-//           connection.release();
-//           reject(err);
-//         }
-//         const querySelect = `SELECT pages.* FROM user LEFT JOIN pages on user.id = pages.id
-//           where user.accessToken = '${accessToken}' and pages.pageId = '${pageLists[i].id}'`;
-//         connection.query(querySelect, (err, result) => {
-//           if (err) {
-//             connection.release();
-//             reject(err);
-//           }
-//           const dataInputDB = {
-//             // id: result[0].id,
-//             pageName: pageLists[i].name,
-//             pageId: pageLists[i].id,
-//             pageAccessToken: longLivedToken[i].access_token,
-//           };
-//           if (result.length > 0) {
-//             dataInputDB.id = result[0].id;
-//             // console.log('dataInputDB: ', dataInputDB);
-//             const queryUpdate = `update pages set ? where pages.pageId = '${pageLists[i].id}'`;
-//             connection.query(queryUpdate, dataInputDB, (err, result) => {
-//               if (err) {
-//                 connection.release();
-//                 reject(err);
-//               }
-//               resolve(result);
-//             });
-//           } else {
-//             const querySelectFindId = `select * from user where user.accessToken = '${accessToken}'`;
-//             connection.query(querySelectFindId, (err, result) => {
-//               if (err) {
-//                 connection.release();
-//                 return reject(err);
-//               } if (result.length === 0) {
-//                 connection.release();
-//                 return reject(new Error({ error: 'Invalid accessToken' }));
-//               }
-//               dataInputDB.id = result[0].id;
-//               const queryInsert = 'insert into pages set ?;';
-//               connection.query(queryInsert, dataInputDB, (err, result) => {
-//                 connection.release();
-//                 if (err) {
-//                   return reject(err);
-//                 }
-//                 return resolve(result);
-//               });
-//             });
-//           }
-//         });
-//       });
-//     }
-//   });
-// }
-
 
 // get facebook Long-lived token
 // GET / https://graph.facebook.com/oauth/access_token
@@ -327,36 +181,6 @@ function checkGreetingMessage(pageId) {
   });
 }
 
-// // Global function
-// // 進去資料庫找資料 , greetingMessage
-// function checkGreetingMessage(pageId) {
-//   return new Promise((resolve, reject) => {
-//     const query = `select * from greetingMessage where pageId = ${pageId}`;
-//     db.query(query, (err, result) => {
-//       if (err) {
-//         return reject(err);
-//       }
-//       return resolve(result);
-//     });
-//   });
-// }
-
-// // 機器人相關內容
-// app.get(`/api/${cst.API_VERSION}/webhook/greeting/:pageId`, async (req, res) => {
-//   // console.log(req.query.pageId);
-//   const { pageId } = req.query;
-//   try {
-//     const checkGreetingMessageResult = await checkGreetingMessage(pageId);
-//     if (checkGreetingMessageResult.length === 0) {
-//       res.send({ data: 'NoData' });
-//     } else {
-//       res.send({ data: checkGreetingMessageResult[0].text });
-//     }
-//   } catch (error) {
-//     res.send({ error: 'someting error happened' });
-//   }
-// });
-
 // 機器人相關內容
 
 // Greeting Message 內容讀取
@@ -377,82 +201,6 @@ app.get(`/api/${cst.API_VERSION}/webhook/greeting/:pageId`, async (req, res) => 
     res.send({ error: 'someting error happened' });
   }
 });
-
-
-// // Greeting Message 內容寫入
-// app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
-//   const { pageId } = req.body.data;
-//   const greetingText = req.body.data.text;
-//   const requestBody = {
-//     get_started: {
-//       payload: 'getStarted',
-//     },
-//     greeting: [
-//       {
-//         locale: 'default',
-//         text: greetingText,
-//       },
-//     ],
-//   };
-//   try {
-//     // Find pageAccessToken
-//     const pageAccessToken = await dbFindPageAccessToken(pageId);
-//     // console.log('pageAccessToken', pageAccessToken);
-//     // SET Greeting request to FB;
-//     await fetchSetGreeting(pageAccessToken, requestBody);
-//     // 判別資料是否已經在資料庫存在
-//     const checkGreetingMessageResult = await checkGreetingMessage(pageId);
-//     // console.log('checkGreetingMessageResult', checkGreetingMessageResult);
-//     // 將資料存入資料庫
-//     const dataIntoGreetingMessageDB = {
-//       pageId,
-//       text: greetingText,
-//     };
-//     const queryInputData = 'insert into greetingMessage set ?';
-//     const queryUpdatedData = `update greetingMessage set ? where pageId ='${pageId}'`;
-//     if (checkGreetingMessageResult.length === 0) {
-//       // 資料庫無資料, 存一筆新的
-//       await greetingMessageDbUsed(queryInputData, dataIntoGreetingMessageDB);
-//       // console.log(insertToDB);
-//       res.send({ data: 'Inserted to DB' });
-//     } else {
-//       // 資料庫有資料, 更新資料
-//       await greetingMessageDbUsed(queryUpdatedData, dataIntoGreetingMessageDB);
-//       // console.log(updateToDB);
-//       res.send({ data: 'Updated to DB' });
-//     }
-//   } catch (error) {
-//     // console.log(error);
-//     res.send({ error: 'someting error happened' });
-//   }
-
-
-//   function greetingMessageDbUsed(query, data) {
-//     return new Promise((resolve, reject) => {
-//       db.query(query, data, (err, result) => {
-//         if (err) {
-//           return reject(err);
-//         }
-//         return resolve(result);
-//       });
-//     });
-//   }
-
-//   function fetchSetGreeting(pageAccessToken, request) {
-//     return new Promise((resolve, reject) => {
-//       axios({
-//         method: 'POST',
-//         url: 'https://graph.facebook.com/v3.2/me/messenger_profile',
-//         headers: {
-//           Authorization: `Bearer ${pageAccessToken}`,
-//           'Content-Type': 'application/json',
-//         },
-//         data: request,
-//       }).then(res => resolve(res.data))
-//         .catch(error => reject(error.data));
-//     });
-//   }
-// });
 
 // Greeting Message 內容寫入
 app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
@@ -535,23 +283,22 @@ function dbFindPageAccessToken(pageId) {
     });
   });
 }
-// 20190510
+// 20190510  
 
 app.get(`/api/${cst.API_VERSION}/webhook/wellcomeMessage/:pageId`, async (req, res) => {
-  const input = {
+  const condition = {
     pageId: req.query.pageId,
     payload: req.query.payload,
   };
-  const selectInput = `select * from sendMessage where pageId = '${input.pageId}' and payload = '${input.payload}'`;
-
-  const queryResultForPageId = await querySelectResultsFromSendMessage(selectInput);
-  // console.log(queryResultForPageId)
-  if (queryResultForPageId.length === 0) {
+  const wellcomeMessageSelectResult = await dao.singleSelect('sendMessage', { pageId: condition.pageId }, 'and', { payload: condition.payload });
+  if (wellcomeMessageSelectResult.length === 0) {
     res.send({ data: 'NoData' });
   } else {
-    res.send({ data: queryResultForPageId[0] });
+    res.send({ data: wellcomeMessageSelectResult[0] });
   }
 });
+
+// 20190512
 
 app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => {
   const response = req.body;
@@ -565,9 +312,6 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
       },
     },
   };
-  // console.log('1000', req.body);
-  // console.log('1001', info.attachment.payload);
-  // console.log('123123123123: ', info)
   const queryInput = {
     pageId: response.pageId,
     position: response.position,
@@ -615,6 +359,67 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
     res.send({ error });
   }
 });
+
+
+// app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => {
+//   const response = req.body;
+//   const info = {
+//     attachment: {
+//       type: 'template',
+//       payload: {
+//         template_type: response.data.message_type,
+//         text: response.data.text,
+//         buttons: response.data.buttons,
+//       },
+//     },
+//   };
+//   const queryInput = {
+//     pageId: response.pageId,
+//     position: response.position,
+//     handleType: response.handleType,
+//     event: response.event,
+//     payload: response.payload,
+//     source: response.source,
+//     info: JSON.stringify(info),
+//   };
+//   try {
+//     const selectInput = `select * from sendMessage where pageId = '${queryInput.pageId}' and payload = '${queryInput.payload}'`;
+//     const queryResultForPageId = await querySelectResultsFromSendMessage(selectInput);
+//     // console.log('queryResultForPageId123: ', queryResultForPageId.length);
+//     if (queryResultForPageId.length === 0) {
+//       // 資料庫中無資料, 需存入一筆新的
+//       db.getConnection((error, connection) => {
+//         if (error) { throw error; }
+//         const queryInputNew = 'insert into sendMessage set ?';
+//         connection.query(queryInputNew, queryInput, (error) => {
+//           connection.release();
+//           if (error) { throw error; }
+//           res.send({ data: 'data has been saved' });
+//         });
+//       });
+//     } else {
+//       // console.log('data was found in db.');
+//       const { pageId } = queryResultForPageId[0];
+//       // 資料庫有現有資料, 故更新資料
+//       const queryInputUpdated = `update sendMessage set ? where pageId = '${pageId}' and payload = 'getStarted'`;
+//       db.getConnection((error, connection) => {
+//         if (error) {
+//           // console.log('error', error)
+//           throw error;
+//         }
+//         connection.query(queryInputUpdated, queryInput, (error) => {
+//           connection.release();
+//           if (error) { throw error; }
+//           // console.log('ok', result);
+//           res.send({ data: 'data has been updated' });
+//         });
+//       });
+//     }
+//   } catch (error) {
+//     // console.log(error);
+//     res.send({ error });
+//   }
+// });
 
 // 用 pageId 確認是否在資料庫中
 function querySelectResultsFromSendMessage(selectQuery) {
