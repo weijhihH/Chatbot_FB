@@ -591,12 +591,18 @@ function callback() {
         }),
       })
         .then(res => res.json())
+        .then((res) => {
+          if (res.error) {
+            throw new Error('error');
+          }
+        })
         .then(() => {
           $('#wellcomeScreenTextArea').prop('readonly', true);
           $('#wellcomeScreenEditButton').prop('disabled', false);
           alert('儲存成功........');
         })
         .catch(() => {
+          $('#wellcomeScreenSubmitButton').prop('disabled', false);
           alert('儲存失敗........');
         });
     });
