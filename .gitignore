@@ -15,3 +15,4 @@ yarn-error.log*
 
 # key file
 /util/*key*.js
+/util/mysqlCon.js
