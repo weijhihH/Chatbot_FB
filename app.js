@@ -196,6 +196,7 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
     ],
   };
   try {
+    // 卡資料不能為空值
     if (!greetingText) {
       throw new Error('input Error');
     }

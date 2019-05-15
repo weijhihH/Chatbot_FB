@@ -1,6 +1,3 @@
-/* eslint-disable no-undef */
-/* eslint-disable no-plusplus */
-/* eslint-disable func-names */
 // global parameters
 const app = {
   fb: {},

@@ -1,7 +1,3 @@
-/* eslint-disable no-restricted-globals */
-/* eslint-disable no-plusplus */
-/* eslint-disable func-names */
-/* eslint-disable no-undef */
 const accessToken = app.getCookie('Authorization');
 
 

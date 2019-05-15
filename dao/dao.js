@@ -143,6 +143,9 @@ module.exports = {
       if (table && conditionOne && operator && conditionTwo) {
         content = [table, conditionOne, conditionTwo];
         result = await con.query(`delete from ?? where ? ${operator} ?`, content);
+      } else if (table && !conditionOne && !operator && !conditionTwo) {
+        content = [table];
+        result = await con.query(`delete from ??`, content);
       }
       await con.query('COMMIT');
       await con.release();

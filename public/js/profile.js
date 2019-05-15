@@ -1,5 +1,3 @@
-/* eslint-disable no-plusplus */
-/* eslint-disable no-undef */
 const accessToken = app.getCookie('Authorization');
 console.log(accessToken);
 
