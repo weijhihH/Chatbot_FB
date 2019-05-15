@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_ENV=development mocha ./test/*.test.js"
   },
   "author": "",
   "license": "ISC",
@@ -16,8 +16,15 @@
     "mysql2": "^1.6.5"
   },
   "devDependencies": {
+    "chai": "^4.2.0",
     "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^13.1.0",
-    "eslint-plugin-import": "^2.17.2"
+    "eslint-plugin-import": "^2.17.2",
+    "expect": "^24.8.0",
+    "faker": "^4.1.0",
+    "jest": "^24.8.0",
+    "mocha": "^6.1.4",
+    "should": "^13.2.3",
+    "supertest": "^4.0.2"
   }
 }

@@ -196,6 +196,10 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
     ],
   };
   try {
+    // 卡資料不能為空值
+    if (!greetingText) {
+      throw new Error('input Error');
+    }
     // Find pageAccessToken
     const pageSelectResult = await dao.singleSelect('pages', { pageId });
     const { pageAccessToken } = pageSelectResult[0];
@@ -218,8 +222,8 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
       res.send({ data: 'Updated to DB' });
     }
   } catch (error) {
-    // console.log(error);
-    res.send({ error: 'someting error happened' });
+    console.log(2222);
+    res.status(500).send({ error: 'Something failed!' });
   }
 
   function fetchSetGreeting(pageAccessToken, request) {

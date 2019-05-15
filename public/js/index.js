@@ -1,5 +1,3 @@
-/* eslint-disable no-undef */
-/* eslint-disable no-unused-vars */
 // FB 預載入判斷有無登入
 window.addEventListener('DOMContentLoaded', app.fb.load);
 window.fbAsyncInit = app.fb.init;

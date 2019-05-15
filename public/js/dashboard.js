@@ -1,7 +1,3 @@
-/* eslint-disable no-restricted-globals */
-/* eslint-disable no-plusplus */
-/* eslint-disable func-names */
-/* eslint-disable no-undef */
 const accessToken = app.getCookie('Authorization');
 
 
@@ -591,12 +587,18 @@ function callback() {
         }),
       })
         .then(res => res.json())
+        .then((res) => {
+          if (res.error) {
+            throw new Error('error');
+          }
+        })
         .then(() => {
           $('#wellcomeScreenTextArea').prop('readonly', true);
           $('#wellcomeScreenEditButton').prop('disabled', false);
           alert('儲存成功........');
         })
         .catch(() => {
+          $('#wellcomeScreenSubmitButton').prop('disabled', false);
           alert('儲存失敗........');
         });
     });
