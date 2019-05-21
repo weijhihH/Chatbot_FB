@@ -10,7 +10,7 @@ if(env==="development"){
     connectionLimit: 100,
     host: 'localhost',
     user: 'root',
-    password: '!@#Ab1233',
+    password: 'a#4%6&8',
     database: 'chatBotTest',
     // debug: true,
   });
