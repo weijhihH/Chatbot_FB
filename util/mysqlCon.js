@@ -1,6 +1,7 @@
 // Mysql Initialization
 const mysql = require('mysql2/promise');
 const mysql1 = require('mysql');
+const key = require('./key.js')
 var env = process.env.NODE_ENV || 'production';
 let con
 let con1;
@@ -10,7 +11,7 @@ if(env==="development"){
     connectionLimit: 100,
     host: 'localhost',
     user: 'root',
-    password: 'a#4%6&8',
+    password: key.MYSQL.APP_SECRECT_KEY,
     database: 'chatBotTest',
     // debug: true,
   });
@@ -18,7 +19,7 @@ if(env==="development"){
     connectionLimit: 100,
     host: 'localhost',
     user: 'root',
-    password: '!@#Ab1233',
+    password: key.MYSQL.APP_SECRECT_KEY,
     database: 'chatBotTest',
     // debug: true,
   });
@@ -28,7 +29,7 @@ if(env==="development"){
     connectionLimit: 100,
     host: 'localhost',
     user: 'root',
-    password: '!@#Ab1233',
+    password: key.MYSQL.APP_SECRECT_KEY,
     database: 'chatbot',
     // debug: true,
   });
@@ -36,7 +37,7 @@ if(env==="development"){
     connectionLimit: 100,
     host: 'localhost',
     user: 'root',
-    password: '!@#Ab1233',
+    password: key.MYSQL.APP_SECRECT_KEY,
     database: 'chatbot',
     // debug: true,
   });
