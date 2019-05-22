@@ -315,11 +315,17 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
         throw new Error ('data format error')
       }
       for (let i = 0; i<input.data.buttons.length ; i++) {
-        console.log(1111,input.data.buttons[i].type,Boolean(input.data.buttons[i].type));
-        console.log(222,input.data.buttons[i].title,Boolean(input.data.buttons[i].title));
-        console.log(333,input.data.buttons[i].payload,Boolean(input.data.buttons[i].payload));
-        if(!input.data.buttons[i].type || !input.data.buttons[i].title.trim() || !input.data.buttons[i].payload.trim()) {
-          throw new Error ('data format error1')
+        console.log(input.data.buttons[i]);
+        if(input.data.buttons[i].type === 'postback') {
+          if(!input.data.buttons[i].payload.trim()){
+            throw new Error ('data format error')
+          }
+        } else if (input.data.buttons[i].type === 'web_url') {
+          if(!input.data.buttons[i].url.trim()){
+            throw new Error ('data format error')
+          }
+        } else if(!input.data.buttons[i].type || input.data.buttons[i].type === '按鈕類型') {
+          throw new Error ('data format error')
         }
       }
       return true
@@ -327,7 +333,7 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
       throw new Error(error)
     }
   };
-});
+}); // end of Wellcome Message
 
 app.get(`/api/${cst.API_VERSION}/webhook/moreSetting/:pageId`, async (req, res) => {
   try {
