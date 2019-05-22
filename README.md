@@ -24,7 +24,7 @@
 >當使用者第一進入聊天頁面會看到的訊息
 
 <img width="500" alt="demo-greeting-messageSetting" src="https://user-images.githubusercontent.com/45849512/58164399-572e7580-7cb8-11e9-9bba-43c70eae11e1.png">
-<img width="500" height="350" alt="demo-greeting-messageFB" src="https://user-images.githubusercontent.com/45849512/58164398-5695df00-7cb8-11e9-9f3e-2e02f41f114e.png">
+<img width="500" height="400" alt="demo-greeting-messageFB" src="https://user-images.githubusercontent.com/45849512/58164398-5695df00-7cb8-11e9-9f3e-2e02f41f114e.png">
 
   b.設定 Wellcome Message
  
@@ -35,7 +35,7 @@
 > PostBack Name : 使用者按下對應按鈕後, Facebook server 會傳遞對應訊息給 bot's server
 
 <img width="500" alt="demo-wellcomeMessageSetting" src="https://user-images.githubusercontent.com/45849512/58164394-54cc1b80-7cb8-11e9-9883-b46432f70eea.png">
-<img width="500" height="350" alt="demo-wellcomeMessageFB" src="https://user-images.githubusercontent.com/45849512/58164397-55fd4880-7cb8-11e9-96fa-c68713265ce9.png">
+<img width="500" height="400" alt="demo-wellcomeMessageFB" src="https://user-images.githubusercontent.com/45849512/58164397-55fd4880-7cb8-11e9-96fa-c68713265ce9.png">
 
   c. 設定 MoreSetting - 擴充範本訊息, 充分使用打造完整的回覆功能
 <img width="500" alt="demo-moreInformationSetting" src="https://user-images.githubusercontent.com/45849512/58164401-572e7580-7cb8-11e9-8892-76ed569ceaa8.png">
