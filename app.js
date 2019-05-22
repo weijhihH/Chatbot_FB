@@ -452,7 +452,6 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
     await dao.moreSeetingDataUpdated(pageId, sendMessageTableinput, source);
     res.send({ data: 'data has been saved' });
   } catch (error) {
-    console.log(error);
     res.send({ error: 'error has happened' });
   }
 
@@ -463,21 +462,15 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
   } // end of messageDataValidator
 
   async function buttonTemplateDataValidator (input) {
-    console.log(input);
     try{
       if (!input.pageId || input.source !== 'moreSetting' || input.handleType !== 'postback' || input.event !== 'attachment' || !input.payload.trim() || input.message.template_type !=='button' || !input.message.text.trim()) {
         throw new Error ('data format error')
       }
       for (let i = 0; i<input.message.buttons.length ; i++) {
-        console.log('111111111',input.message.buttons[i]);
-        let messageButtonType =  input.message.buttons[i].type
-        console.log(Boolean(input.message.buttons[i].payload.trim()));
         if(input.message.buttons[i].type === '按鈕類型' || !input.message.buttons[i].title.trim() ) {
-          console.log(456);
           throw new Error ('data format error')
         }
         if(input.message.buttons[i].payload){
-          console.log(123123);
           if(!input.message.buttons[i].payload.trim()){
             throw new Error ('data format error')
           }
