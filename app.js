@@ -81,12 +81,13 @@ app.get('/api/signin', async (req, res) => {
     const expiredTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 day
     const userDataFromFB = await axios.get(url);
     const profile = {
-      id: userDataFromFB.data.id,
+      id: parseInt(userDataFromFB.data.id),
       name: userDataFromFB.data.name,
       email: userDataFromFB.data.email,
       accessToken,
       expiredTime,
     };
+
     await dao.signIn(profile);
     res.cookie('Authorization', profile.accessToken);
     res.send({ data: profile });

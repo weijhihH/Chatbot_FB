@@ -11,7 +11,6 @@ function fbLogin () {
       fetch('/api/signin', {
         headers: {
           Authorization: `Bearer ${response.authResponse.accessToken}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
         },
         method: 'GET',
       })
@@ -21,7 +20,10 @@ function fbLogin () {
           app.state.auth = res.data.accessToken;
           window.location = '/user/profile.html';
         })
-        .catch(() => alert('登入失敗，請重新嘗試'));
+        .catch(() => {
+          alert('登入失敗，請重新嘗試')
+          window.location = '/'
+        });
     } else {
       // console.log('FB.login failed');
       alert('登入失敗，請重新嘗試');
