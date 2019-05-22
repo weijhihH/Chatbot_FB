@@ -66,6 +66,7 @@ function callback() {
     // 處理 Wellcome sreen button
     // 呼叫 api and render to html;
     $('.navWellcomeMessageGreeting').on('click', () => {
+      app.greetingMessage.SubmitButtonStatus = null;
       fetch(`/api/${app.cst.apiVersion}/webhook/greeting/getInformation?pageId=${app.fb.pageId}`, {
         method: 'GET',
         headers: {
@@ -74,7 +75,11 @@ function callback() {
       })
         .then(res => res.json())
         .then((res) => {
-        // 將現有資料清掉, 避免重複按的時候出錯
+          //  error handle
+          if(res.error) {
+            throw new Error (res.error)
+          }
+        	// 將現有資料清掉, 避免重複按的時候出錯
           delForm();
           // Server's data render to html
           let text;
@@ -92,8 +97,8 @@ function callback() {
           $('#wellcomeMessageFormGreeting').show();
           $('#wellcomeMessageForm').hide();
         })
-        .catch((err) => {
-          console.log('err', err);
+        .catch((error) => {
+          alert('讀取資料錯誤')
         });
     });
 
@@ -102,6 +107,7 @@ function callback() {
     // 呼叫 api and render to html;
 
     $('.navWellcomeMessage').on('click', () => {
+      app.greetingMessage.SubmitButtonStatus = null;
       fetch(`/api/${app.cst.apiVersion}/webhook/wellcomeMessage/getInformation?pageId=${app.fb.pageId}&payload=getStarted`, {
         method: 'GET',
         headers: {
@@ -112,8 +118,6 @@ function callback() {
         .then((res) => {
         // 移除 wellcome Screen 的內容
           delForm();
-
-
           // 如果資料庫沒有存任何 template
           if (res.data === 'NoData') {
             app.buttonTemplate.numberOfSet = 1;
@@ -140,12 +144,14 @@ function callback() {
           $('#wellcomeMessageForm').show();
         })
         .catch((err) => {
+          alert('資料讀取錯誤');
           console.log('err', err);
         });
     });
 
     // 按下 broadcast 內的 message setting button
     $(this).on('click', '.navBroadcastSetting', () => {
+      app.greetingMessage.SubmitButtonStatus = null;
       // console.log('.navBroadcastSetting')
       delForm();
       $('#mainContentBroadcast').append(addSets());
@@ -239,6 +245,7 @@ function callback() {
 
     // render the data to html after click the "更多設定" button.
     $('.navMoreSetting').on('click', () => {
+      app.greetingMessage.SubmitButtonStatus = null;
       delForm();
       $('#mainContent').append(addSets());
       // console.log('.navMoreSetting')
@@ -695,7 +702,10 @@ function callback() {
         }),
       })
         .then(res => res.json())
-        .then(() => {
+        .then((res) => {
+          if(res.error){
+            throw new Error(res.error)
+          }
           $('.form-control').prop('readonly', true);
           $('#wellcomeMessageEditButton').prop('disabled', false);
           $('#wellcomeMessageSubmitButton').prop('disabled', true);
@@ -854,7 +864,11 @@ function callback() {
         }),
       })
         .then(res => res.json())
-        .then(() => {
+        .then((res) => {
+          console.log(res);
+          if(res.error) {
+            throw new Error (res.error);
+          }
         // 成功, 將送出表單按鈕隱藏起來
           $('#submitFormButton').prop('disabled', true);
           $('.btn').prop('disabled', true);
@@ -873,10 +887,10 @@ function callback() {
 
 // wellcome screen content
 function wellcomeScreenContent(text) {
-  let html = '<form id="wellcomeMessageFormGreeting " class=" form-group delForm" divId="new">';
-  html += '<label for="wellcomeMessageTextArea">Wellcome message - Greeting - 使用者第一次要開始聊天的時候會顯示的訊息</label>';
+  let html = '<form id="wellcomeMessageFormGreeting " class=" form-group delForm" divId="new" data-toggle="validator">';
+  html += '<label for="wellcomeMessageTextArea">Wellcome message - Greeting - 使用者第一次進入聊天畫面看到的預設訊息</label>';
   if (text === 'NoData') {
-    html += `<textarea class="form-control" id="wellcomeScreenTextArea" rows="10" placeholder="${text}" ></textarea>`;
+    html += `<textarea class="form-control" id="wellcomeScreenTextArea" rows="10" placeholder="${text}"></textarea>`;
   } else {
     html += `<textarea class="form-control" id="wellcomeScreenTextArea" rows="10" readonly>${text}</textarea>`;
   }

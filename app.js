@@ -196,8 +196,10 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
     ],
   };
   try {
+    // 檢查資料不能為空值, 將字串去除空白符號
+    const inputChecked = greetingText.trim();
     // 卡資料不能為空值
-    if (!greetingText) {
+    if (!inputChecked) {
       throw new Error('input Error');
     }
     // Find pageAccessToken
@@ -222,7 +224,6 @@ app.post(`/api/${cst.API_VERSION}/webhook/greeting`, async (req, res) => {
       res.send({ data: 'Updated to DB' });
     }
   } catch (error) {
-    console.log(2222);
     res.status(500).send({ error: 'Something failed!' });
   }
 
@@ -271,6 +272,7 @@ app.get(`/api/${cst.API_VERSION}/webhook/wellcomeMessage/:pageId`, async (req, r
 app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => {
   try {
     const response = req.body;
+    await inputDataValidator(response);
     const info = {
       attachment: {
         type: 'template',
@@ -305,6 +307,26 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
   } catch (error) {
     res.send({ error });
   }
+
+  // 驗證輸入資料正確性
+  async function inputDataValidator (input) {
+    try{
+      if (!input.pageId || input.source !== 'wellcomeMessage' || input.handleType !== 'postback' || input.event !== 'attachment' || input.payload !=='getStarted' || input.data.message_type !=='button' || !input.data.text) {
+        throw new Error ('data format error')
+      }
+      for (let i = 0; i<input.data.buttons.length ; i++) {
+        console.log(1111,input.data.buttons[i].type,Boolean(input.data.buttons[i].type));
+        console.log(222,input.data.buttons[i].title,Boolean(input.data.buttons[i].title));
+        console.log(333,input.data.buttons[i].payload,Boolean(input.data.buttons[i].payload));
+        if(!input.data.buttons[i].type || !input.data.buttons[i].title.trim() || !input.data.buttons[i].payload.trim()) {
+          throw new Error ('data format error1')
+        }
+      }
+      return true
+    } catch (error) {
+      throw new Error(error)
+    }
+  };
 });
 
 app.get(`/api/${cst.API_VERSION}/webhook/moreSetting/:pageId`, async (req, res) => {
@@ -398,21 +420,74 @@ app.post(`/api/${cst.API_VERSION}/broadcast`, async (req, res) => {
   }
 });
 
+
+
+
+
+
+
 // 更多設定頁面 api
 app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
   const response = req.body;
   const source = 'moreSetting';
   const { pageId } = response.data[0];
   try {
+    for(let i=0; i< response.data.length; i++) {
+      if(response.data[i].event === 'message') {
+        await messageDataValidator(response.data[i])
+      } else if (response.data[i].event === 'attachment') {
+        await buttonTemplateDataValidator(response.data[i]);
+      }
+    }
     // 整理要寫入 db 的資料
     const sendMessageTableinput = await insertContent(response.data);
     // 寫入資料庫
     await dao.moreSeetingDataUpdated(pageId, sendMessageTableinput, source);
     res.send({ data: 'data has been saved' });
   } catch (error) {
-    res.send({ error: 'error in DB' });
+    console.log(error);
+    res.send({ error: 'error has happened' });
   }
-});
+
+  async function messageDataValidator(input) {
+    if(!input.pageId || !input.payload.trim() || !input.handleType.trim() || !input.message.text.trim()) {
+      throw new Error ('data format wrong')
+    }
+  } // end of messageDataValidator
+
+  async function buttonTemplateDataValidator (input) {
+    console.log(input);
+    try{
+      if (!input.pageId || input.source !== 'moreSetting' || input.handleType !== 'postback' || input.event !== 'attachment' || !input.payload.trim() || input.message.template_type !=='button' || !input.message.text.trim()) {
+        throw new Error ('data format error')
+      }
+      for (let i = 0; i<input.message.buttons.length ; i++) {
+        console.log('111111111',input.message.buttons[i]);
+        let messageButtonType =  input.message.buttons[i].type
+        console.log(Boolean(input.message.buttons[i].payload.trim()));
+        if(input.message.buttons[i].type === '按鈕類型' || !input.message.buttons[i].title.trim() ) {
+          console.log(456);
+          throw new Error ('data format error')
+        }
+        if(input.message.buttons[i].payload){
+          console.log(123123);
+          if(!input.message.buttons[i].payload.trim()){
+            throw new Error ('data format error')
+          }
+        } else if (input.message.buttons[i].url) {
+          if(!input.message.buttons[i].url.trim()){
+            throw new Error ('data format error')
+          }
+        }  else if (!input.message.buttons[i].payload && !input.message.buttons[i].url) {
+          throw new Error ('data format error')
+        }
+      }
+      return true
+    } catch (error) {
+      throw new Error(error)
+    }
+  }; // end of buttonTemplateDataValidator
+}); // end of moreSetting post api
 
 // 整理前端送進來的資料 - moreSetting/broadcast 使用
 function insertContent(input) {
