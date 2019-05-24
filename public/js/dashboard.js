@@ -163,7 +163,6 @@ function callback() {
       })
         .then(res => res.json())
         .then((res) => {
-          console.log('res', res);
           // data was not found in db
           if (res.data === 'NoData') {
             console.log('data not found in db.');
@@ -209,7 +208,12 @@ function callback() {
               stepping: 1, // 單位是半個小時
             });
             $('select#timezone').val(timezone);
-
+            // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
+            $('.btn').prop('disabled', true);
+            $('.form-control').prop('readonly', true);
+            $('.custom-select').prop('disabled', true);
+            $('#editFormButton').prop('disabled', false);
+            $('.broadcastRepeatDate').prop('disabled', true);
             $.each($("input[name='repeatDate']"), function () {
               repeat.forEach((e) => {
                 if (e === $(this).val()) {
@@ -218,13 +222,6 @@ function callback() {
                 }
               });
             });
-
-            // // 資料庫有資料的話, 先將按鈕都失效, 只留編輯表單按鈕可以選
-            $('.btn').prop('disabled', true);
-            $('.form-control').prop('readonly', true);
-            $('.custom-select').prop('disabled', true);
-            $('#editFormButton').prop('disabled', false);
-            $('.broadcastRepeatDate').prop('disabled', true);
           }
         });
     });
@@ -505,6 +502,7 @@ function callback() {
     // 控制 Wellcome Message 內的 Add and Delete Button
     $('#mainContent').on('click', '#addButtonTemplate', function () {
       const numberOfElements = $(this).parents('.moreSettingDiv').children('.form-row').length;
+      // console.log(numberOfElements,'num. of elements');
       if (numberOfElements < 3) {
         let html = '<div class="form-row ">';
         html += '<div class="col-3"><input type="text" class="form-control button text" placeholder="Button Name"></div>';
@@ -909,9 +907,10 @@ function wellcomeMessageContent(info, addNewSet = false, payload = false) {
   if (addNewSet) {
     html += '<button type="button" class="btn btn-sm btn-danger deleteButton">Delete</button>';
     html += '<button type="button" class="btn btn-sm btn-success upButton">Up</button>';
-    html += '<button type="button" class="btn btn-sm btn-success downButton">Down</button>';
+    html += '<button type="button" class="btn btn-sm btn-success downButton">Down</button></br>';
   }
-  html += '<label>Button Template (下列 Button 選項需為 1~3 組)</label>';
+  html += '<label>Button Template (下列 Button 選項組數為 1~3 組)</br>注意事項:</br> 1.若按鈕選項選 "url" ,  PostBack Name 請填入合法的網址</br>2.Wellcome Mesage 對應的 PostBack Name 為 getStarted </label>';
+
   if (addNewSet && payload) {
     html += `<input type="text" class="form-control payload eventType" 
     handleType="postback" placeholder="message event" rows="1" value="${payload}" readonly>`;
@@ -1004,8 +1003,8 @@ function textResponse(content, addNewSet = false) {
   html += '<div class="form-group">';
   html += '<button type="button" class="btn btn-sm btn-danger deleteButton">Delete</button>';
   html += '<button type="button" class="btn btn-sm btn-success upButton">Up</button>';
-  html += '<button type="button" class="btn btn-sm btn-success downButton">Down</button>';
-  html += '<label for="textResponse">Text Response</label>';
+  html += '<button type="button" class="btn btn-sm btn-success downButton">Down</button></br>';
+  html += '<label for="textResponse">Text Response</br>注意事項:</br> 1.Wellcome Mesage 對應的 PostBack Name 為 getStarted</label>';
   if (addNewSet) {
     const messageEvent = content.payload;
     html += `<input type="text" class="form-control payload eventType" handleType="message" placeholder="message event" value="${messageEvent}">`;

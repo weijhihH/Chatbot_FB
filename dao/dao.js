@@ -165,7 +165,7 @@ module.exports = {
       await con.query(`delete from sendMessage where pageId ='${pageId}' and source = '${source}'`);
       await con.query('insert into sendMessage (`pageId`,`position`,`handleType`,`event`,`payload`,`source`,`info`) values ?', [SendMessagecontent]);
       const broadcastSetSelectedresult = await con.query(`select * from broadcastSet where pageId = '${pageId}'`);
-      if (broadcastSetSelectedresult.length === 0) {
+      if (broadcastSetSelectedresult[0].length === 0) {
         await con.query('insert into broadcastSet set ?', broadcastSetContent);
       } else {
         await con.query(`update broadcastSet set ? where pageId = '${pageId}'`, broadcastSetContent);

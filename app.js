@@ -324,6 +324,8 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
         } else if (input.data.buttons[i].type === 'web_url') {
           if(!input.data.buttons[i].url.trim()){
             throw new Error ('data format error')
+          } else if(!is_url(input.data.buttons[i].url)){
+            throw new Error ('data format error')
           }
         } else if(!input.data.buttons[i].type || input.data.buttons[i].type === '按鈕類型') {
           throw new Error ('data format error')
@@ -335,6 +337,20 @@ app.post(`/api/${cst.API_VERSION}/webhook/wellcomeMessage`, async (req, res) => 
     }
   };
 }); // end of Wellcome Message
+
+// 判斷 url 輸入進來是否合法
+function is_url(str)
+{
+  regexp =  /^(?:(?:https?|ftp):\/\/)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:\/\S*)?$/;
+    if (regexp.test(str))
+    {
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+}
 
 app.get(`/api/${cst.API_VERSION}/webhook/moreSetting/:pageId`, async (req, res) => {
   try {
@@ -476,6 +492,8 @@ app.post(`/api/${cst.API_VERSION}/webhook/moreSetting`, async (req, res) => {
           }
         } else if (input.message.buttons[i].url) {
           if(!input.message.buttons[i].url.trim()){
+            throw new Error ('data format error')
+          } else if (!is_url(input.message.buttons[i].url)){
             throw new Error ('data format error')
           }
         }  else if (!input.message.buttons[i].payload && !input.message.buttons[i].url) {
