@@ -143,3 +143,9 @@ muluisacat.com
 ```
 
 ---
+
+## Database Schema
+
+<img width="1024" alt="chatbotSchema" src="https://user-images.githubusercontent.com/45849512/58397531-06d26180-8084-11e9-9997-3c54a94b691e.png">
+
+---

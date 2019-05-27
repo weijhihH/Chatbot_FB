@@ -797,7 +797,7 @@ function callback() {
             position: index,
             event, // event : message or attachment
             payload,
-            handleType,
+            handleType: 'message',
             message: {
               text,
             },
@@ -838,7 +838,7 @@ function callback() {
             position: index,
             event, // event : message or attachment
             payload,
-            handleType,
+            handleType: 'postback',
             message:
               {
                 template_type: 'button',
