@@ -32,12 +32,32 @@
 
 選項名稱:
 > Button Name : 使用者看到按鈕名稱
+
 > PostBack Name : 使用者按下對應按鈕後, Facebook server 會傳遞對應訊息給 bot's server
+
+> 按鈕類型:
+> a. 回傳按鈕 : 在使用者點擊後, Facebook 會回傳訊息給 Server , 然後 Server 可以在判斷要回應的訊息
+>b. url : 放合法的網址, 使用者點擊後會跑出對應網址的新頁面
 
 <img width="500" alt="demo-wellcomeMessageSetting" src="https://user-images.githubusercontent.com/45849512/58164394-54cc1b80-7cb8-11e9-9883-b46432f70eea.png">
 <img width="500" height="400" alt="demo-wellcomeMessageFB" src="https://user-images.githubusercontent.com/45849512/58164397-55fd4880-7cb8-11e9-96fa-c68713265ce9.png">
 
   c. 設定 MoreSetting - 擴充範本訊息, 充分使用打造完整的回覆功能
+  選項名稱:
+
+  -- 在伺服器接收到 Facebook Server 訊息後,可以繼續擴充回應選項 
+
+>Button Type :
+>a. 文字範本: 訊息回覆, 無後續選項給使用者點擊 ;
+> b. 按鈕範本: 範本回覆,可設定後續選項給使用者點擊;
+
+> Button Name : 使用者看到按鈕名稱
+
+> PostBack Name : 使用者按下對應按鈕後, Facebook server 會傳遞對應訊息給 bot's server
+
+> 按鈕類型:
+> a. 回傳按鈕 : 在使用者點擊後, Facebook 會回傳訊息給 Server , 然後 Server 可以在判斷要回應的訊息
+>b. url : 放合法的網址, 使用者點擊後會跑出對應網址的新頁面
 <img width="500" alt="demo-moreInformationSetting" src="https://user-images.githubusercontent.com/45849512/58164401-572e7580-7cb8-11e9-8892-76ed569ceaa8.png">
 <img width="500" height="400" alt="demo-moreInformationFB" src="https://user-images.githubusercontent.com/45849512/58164402-57c70c00-7cb8-11e9-85f9-d70b7a910e90.png">
 
