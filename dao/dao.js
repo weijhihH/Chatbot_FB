@@ -8,11 +8,11 @@ module.exports = {
     const con = await pool.getConnection();
     try {
       await con.query('START TRANSACTION');
-      const findUserList = await con.query(`select * from user where id = '${profile.id}';`);
+      const findUserList = await con.query(`select * from user where id = ` + con.escape(profile.id) );
       if (findUserList[0].length === 0) {
         await con.query('insert into user set?', profile);
       } else if (findUserList[0].length !== 0) {
-        await con.query(`update user set ? where id = '${profile.id}'`, profile);
+        await con.query(`update user set ? where id = ` + con.escape(profile.id), profile);
       }
       await con.query('COMMIT');
       await con.release();
@@ -31,14 +31,14 @@ module.exports = {
       await con.query('START TRANSACTION');
       // 確認是否已經有存在於 table
       const selectResult = await con.query(`SELECT pages.* FROM user LEFT JOIN pages on user.id = pages.id 
-        where user.accessToken = '${accessToken}' and pages.pageId = '${pageId}'`);
+        where user.accessToken = ` + con.escape(accessToken) + ` and pages.pageId = ` + con.escape(pageId));
       if (selectResult[0].length > 0) {
         data.id = selectResult[0][0].id;
         // 更新 page資訊, longliveToken資訊更新
-        await con.query(`update pages set ? where pages.pageId = '${pageId}'`, data);
+        await con.query(`update pages set ? where pages.pageId = ` + con.escape(pageId) , data);
       } else {
         // 查詢使用者是否存在於 table
-        const selectFromUserDB = await con.query(`select * from user where user.accessToken = '${accessToken}'`);
+        const selectFromUserDB = await con.query(`select * from user where user.accessToken = ` + con.escape(accessToken));
         if (selectFromUserDB[0].length === 0) {
           return new Error({ error: 'Invalid accessToken' });
         }
@@ -60,7 +60,7 @@ module.exports = {
     const con = await pool.getConnection();
     try {
       const query = `select rule.rule from broadcastRepeat left join rule 
-      on broadcastRepeat.ruleId = rule.ruleid where pageId ='${pageId}'`;
+      on broadcastRepeat.ruleId = rule.ruleid where pageId = ` + con.escape(pageId);
       const result = await con.query(query);
       await con.release();
       return result[0];
@@ -160,21 +160,20 @@ module.exports = {
   async broadcastDataUpdated(pageId, SendMessagecontent, source, broadcastSetContent, broadcastRepeatContent) {
     const con = await pool.getConnection();
     try {
-      console.log(broadcastSetContent.repeat);
       await con.query('START TRANSACTION');
-      await con.query(`delete from sendMessage where pageId ='${pageId}' and source = '${source}'`);
+      await con.query(`delete from sendMessage where pageId = ` + con.escape(pageId) +` and source = ` + con.escape(source));
       await con.query('insert into sendMessage (`pageId`,`position`,`handleType`,`event`,`payload`,`source`,`info`) values ?', [SendMessagecontent]);
-      const broadcastSetSelectedresult = await con.query(`select * from broadcastSet where pageId = '${pageId}'`);
+      const broadcastSetSelectedresult = await con.query(`select * from broadcastSet where pageId = ` + con.escape(pageId));
       if (broadcastSetSelectedresult[0].length === 0) {
         await con.query('insert into broadcastSet set ?', broadcastSetContent);
       } else {
-        await con.query(`update broadcastSet set ? where pageId = '${pageId}'`, broadcastSetContent);
+        await con.query(`update broadcastSet set ? where pageId = ` +con.escape(pageId), broadcastSetContent);
       }
       if (broadcastSetContent.repeat) {
-        await con.query(`delete from broadcastRepeat where pageId = '${pageId}' and ruleId between 1 and 7`);
+        await con.query(`delete from broadcastRepeat where pageId = `+ con.escape(pageId)+ ` and ruleId between 1 and 7`);
         await con.query('insert into broadcastRepeat (`pageId`,`ruleId`) values ?', [broadcastRepeatContent]);
       } else {
-        await con.query(`delete from broadcastRepeat where pageId ='${pageId}'`);
+        await con.query(`delete from broadcastRepeat where pageId = ` + con.escape(pageId));
       }
       await con.query('COMMIT');
       await con.release();
@@ -190,7 +189,7 @@ module.exports = {
     const con = await pool.getConnection();
     try {
       await con.query('START TRANSACTION');
-      await con.query(`delete from sendMessage where pageId ='${pageId}' and source = '${source}'`);
+      await con.query(`delete from sendMessage where pageId = ` + con.escape(pageId) +` and source = ` + con.escape(source));
       await con.query('insert into sendMessage (`pageId`,`position`,`handleType`,`event`,`payload`,`source`,`info`) values ?', [SendMessagecontent]);
       await con.query('COMMIT');
       await con.release();
